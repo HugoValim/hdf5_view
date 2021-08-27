@@ -87,7 +87,6 @@ class MyDisplay(Display):
             self.ui.gridLayout.addWidget(self.dict_motors[i], pos, 0)
             self.dict_motors[i].setText(i)
             pos += 1
-        print(pos)
         while pos < 10:
             self.ui.gridLayout.addWidget(QtWidgets.QLabel(), pos, 0)
             pos += 1

@@ -53,6 +53,7 @@ class MyDisplay(Display):
                     msgbox = QtWidgets.QMessageBox()
                     msgbox_text = 'Size of {} is different from the counters, fix or uncheck it'.format(self.checked_now)
                     ret = msgbox.question(self, 'Warning', msgbox_text, QtWidgets.QMessageBox.Ok)
+                    break
                 else:
                     self.plot.addCurve(self.motors_data[self.checked_now], self.counters_data[i], legend = i)
             else:

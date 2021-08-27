@@ -13,6 +13,9 @@ class MyDisplay(Display):
 
     def __init__(self, parent=None, args=None, macros=None):
         super(MyDisplay, self).__init__(parent=parent, args=args, macros=macros)
+        
+        self.app = QApplication.instance()
+        self.app.main_window.showNormal()
         self.initializa_setup()
         self.make_connections()
         self.display_hdf5_files()
@@ -28,6 +31,8 @@ class MyDisplay(Display):
 
     def make_connections(self):
         self.ui.listWidget_files.doubleClicked.connect(self.plot_tab)
+        self.ui.pushButton_delete_tab.clicked.connect(self.delete_tab)
+        self.ui.lineEdit_dir_path.returnPressed.connect(self.display_hdf5_files)
 
     def display_hdf5_files(self):
         files = os.listdir(self.ui.lineEdit_dir_path.text())
@@ -44,9 +49,12 @@ class MyDisplay(Display):
         self.tab_dict[value]['layout'] = QHBoxLayout()
         self.tab_dict[value]['widget'].setLayout(self.tab_dict[value]['layout'])
         self.tab_dict[value]['display'] = PyDMEmbeddedDisplay(parent=self)
-        self.tab_dict[value]['display'].macros = json.dumps({"FILE":self.ui.lineEdit_dir_path.text() + value})
+        self.tab_dict[value]['display'].macros = json.dumps({"FILE":self.ui.lineEdit_dir_path.text()  + '/' + value})
         self.tab_dict[value]['display'].filename = path.join(path.dirname(path.realpath(__file__)), 'plot_hdf5.py')
         self.tab_dict[value]['layout'].addWidget(self.tab_dict[value]['display'])
+
+    def delete_tab(self):
+        self.tabWidget.removeTab(self.tabWidget.currentIndex())
 
 
 

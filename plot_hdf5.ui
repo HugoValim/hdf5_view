@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1219</width>
+    <width>1272</width>
     <height>657</height>
    </rect>
   </property>
@@ -20,16 +20,13 @@
       <number>0</number>
      </property>
      <item>
-      <layout class="QVBoxLayout" name="verticalLayout_motors"/>
-     </item>
-     <item>
-      <layout class="QVBoxLayout" name="verticalLayout_counter"/>
+      <layout class="QGridLayout" name="gridLayout"/>
      </item>
      <item>
       <widget class="Plot1D" name="plot1d">
        <property name="maximumSize">
         <size>
-         <width>800</width>
+         <width>16777215</width>
          <height>16777215</height>
         </size>
        </property>
@@ -41,19 +38,22 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>Plot1D</class>
-   <extends>PlotWindow</extends>
-   <header>silx.gui.plot.PlotWindow</header>
-  </customwidget>
-  <customwidget>
    <class>PlotWidget</class>
    <extends>QMainWindow</extends>
    <header>silx.gui.plot.PlotWidget</header>
+   <container>1</container>
   </customwidget>
   <customwidget>
    <class>PlotWindow</class>
    <extends>PlotWidget</extends>
    <header>silx.gui.plot.PlotWindow</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>Plot1D</class>
+   <extends>PlotWindow</extends>
+   <header>silx.gui.plot.PlotWindow</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

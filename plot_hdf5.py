@@ -31,20 +31,18 @@ class MyDisplay(Display):
         self.counters_data = {}
         self.motors_data = {}
 
-        try:
-            with silx.io.open(self.macros['FILE']) as sf:
-                self.data = sf
-                instrument = sf['Scan/scan_000/instrument']
-                for i in instrument:
-                    # If the data is called 'data' them its a motor, otherwise its a counter
-                    if 'data' in instrument[i]:
-                        self.motors_data[i] = instrument[i]['data'][:]
-                    else:
-                        self.counters_data[i] = instrument[i][i][:]
-        except:
-            msgbox = QtWidgets.QMessageBox()
-            msgbox_text = 'File {} is open, close it please'.format(self.macros['FILE'])
-            ret = msgbox.question(self, 'Warning', msgbox_text, QtWidgets.QMessageBox.Ok)
+        fo = open(self.macros['FILE'])
+        fo.close()
+        with silx.io.open(self.macros['FILE']) as sf:
+            self.data = sf
+            instrument = sf['Scan/scan_000/instrument']
+            for i in instrument:
+                # If the data is called 'data' them its a motor, otherwise its a counter
+                if 'data' in instrument[i]:
+                    self.motors_data[i] = instrument[i]['data'][:]
+                else:
+                    self.counters_data[i] = instrument[i][i][:]
+
 
     def set_plot(self):
         for i in self.counters_data.keys():

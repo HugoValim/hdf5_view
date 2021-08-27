@@ -72,7 +72,7 @@ class MyDisplay(Display):
     def plot_counters(self):
         self.plot = self.ui.plot1d  # Create the plot widget
         self.dict_counters = {}
-        pos = 0
+        pos = 1
         for i in self.counters_data.keys():
             self.dict_counters[i] = QtWidgets.QCheckBox()
             self.ui.gridLayout.addWidget(self.dict_counters[i], pos, 1)
@@ -81,7 +81,7 @@ class MyDisplay(Display):
 
     def select_x_axis(self):
         self.dict_motors = {}
-        pos  = 0
+        pos  = 1
         for i in self.motors_data.keys():
             self.dict_motors[i] = QtWidgets.QCheckBox()
             self.ui.gridLayout.addWidget(self.dict_motors[i], pos, 0)

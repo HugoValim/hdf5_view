@@ -60,6 +60,9 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="selectionMode">
+             <enum>QAbstractItemView::ExtendedSelection</enum>
+            </property>
            </widget>
           </item>
          </layout>
@@ -78,20 +81,14 @@
              <number>0</number>
             </property>
             <item>
-             <spacer name="horizontalSpacer">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
+             <widget class="QPushButton" name="pushButton_multi_plot">
+              <property name="text">
+               <string>Multi Plot</string>
               </property>
-              <property name="sizeType">
-               <enum>QSizePolicy::Expanding</enum>
+              <property name="shortcut">
+               <string>Return</string>
               </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>900</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
+             </widget>
             </item>
             <item>
              <widget class="QPushButton" name="pushButton_delete_tab">

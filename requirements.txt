@@ -1,0 +1,4 @@
+pydm
+pyqt5
+silx
+numpy

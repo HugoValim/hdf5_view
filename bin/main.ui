@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1250</width>
-    <height>800</height>
+    <height>921</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -38,36 +38,6 @@
          <number>0</number>
         </property>
         <item>
-         <layout class="QVBoxLayout" name="verticalLayout_6">
-          <item>
-           <widget class="QLineEdit" name="lineEdit_dir_path">
-            <property name="maximumSize">
-             <size>
-              <width>200</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>/tmp/</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QListWidget" name="listWidget_files">
-            <property name="maximumSize">
-             <size>
-              <width>200</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="selectionMode">
-             <enum>QAbstractItemView::ExtendedSelection</enum>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <property name="leftMargin">
            <number>0</number>
@@ -75,33 +45,6 @@
           <property name="topMargin">
            <number>0</number>
           </property>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_2">
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <item>
-             <widget class="QPushButton" name="pushButton_multi_plot">
-              <property name="text">
-               <string>Multi Plot</string>
-              </property>
-              <property name="shortcut">
-               <string>Return</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButton_delete_tab">
-              <property name="text">
-               <string>Delete Tab</string>
-              </property>
-              <property name="shortcut">
-               <string>Del</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
           <item>
            <widget class="QTabWidget" name="tabWidget">
             <property name="minimumSize">
@@ -115,6 +58,12 @@
               <width>16777215</width>
               <height>16777215</height>
              </size>
+            </property>
+            <property name="tabsClosable">
+             <bool>true</bool>
+            </property>
+            <property name="movable">
+             <bool>true</bool>
             </property>
            </widget>
           </item>

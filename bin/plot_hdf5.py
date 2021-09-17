@@ -164,7 +164,7 @@ class MyDisplay(Display):
             if monitor != self.monitor_checked_now:
                 self.dict_monitors[monitor].setChecked(False)
         
-        monitor_false_flag = len(self.dict_motors.keys())
+        monitor_false_flag = len(self.dict_monitors.keys())
         for monitor in self.dict_monitors.keys():
             if not self.dict_monitors[monitor].isChecked():
                 monitor_false_flag -= 1

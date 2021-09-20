@@ -23,37 +23,26 @@ def fitGauss(xarray, yarray):
     fit_Y: `array`
     fit_result: `ModelFit`
     """
-
     y = yarray
     x = xarray
-
     gaussMod = GaussianModel()
     linMod = LinearModel()
     pars = linMod.make_params(intercept=y.min(), slope=0)
     pars += linMod.guess(y, x=x)
-
     pars += gaussMod.guess(y, x=x)
-
     mod = gaussMod + linMod
-
     fwhm = 0
     fwhm_position = 0
-
     try:
         result = mod.fit(y, pars, x=x)
         fwhm = result.values['fwhm']
         fwhm_position = result.values['center']
     except:
-
         result = None
-
-
     peak_position = xarray[np.argmax(y)]
     peak = np.max(y)
-
     minv_position = x[np.argmin(y)]
     minv = np.min(y)
-
     COM = (np.multiply(x,y).sum())/y.sum()
-
     return (peak, peak_position, minv, minv_position, fwhm, fwhm_position, COM, result)
+    

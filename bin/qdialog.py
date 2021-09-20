@@ -4,6 +4,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5 import QtGui
 
 class FileDialog(QFileDialog):
+    """Inherit the QFileDialog to change it behavior when selecting more than 1 file at a time"""
     def __init__(self, *args):
         QtGui.QFileDialog.__init__(self, *args)
         self.setOption(self.DontUseNativeDialog, True)

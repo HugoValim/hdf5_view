@@ -44,6 +44,7 @@ class MyDisplay(Display):
         """Initialiaze all needed things"""
         self.app = QApplication.instance()
         self.app.main_window.showNormal()
+        self.app.main_window.setWindowTitle('SOL-View')
         self._createMenuBar()
         self.tab_dict = {}
         self.make_connections()

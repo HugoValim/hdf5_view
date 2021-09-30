@@ -70,18 +70,14 @@ class MyDisplay(Display):
 
     def plot_tab(self, items):
         """Manage all plot tab and load an embedded display for it chunk of files selected in browser file menu"""
-        tab_name = ''
-        for item in items:
-            head, tail = os.path.split(item)
-            tab_name += tail + ' - '
-            path_file = head
-        tab_name = tab_name[:-3]
+        tab_index = self.tabWidget.count()
+        tab_name = 'Plot ' + str(tab_index)
         self.tab_dict[tab_name] = {'widget' : QtWidgets.QWidget()}
         index = self.tabWidget.addTab(self.tab_dict[tab_name]['widget'], tab_name)
         self.tab_dict[tab_name]['layout'] = QHBoxLayout()
         self.tab_dict[tab_name]['widget'].setLayout(self.tab_dict[tab_name]['layout'])
         self.tab_dict[tab_name]['display'] = PyDMEmbeddedDisplay(parent=self)
-        self.tab_dict[tab_name]['display'].macros = json.dumps({"FILE":tab_name, "PATH" : path_file + '/'})
+        self.tab_dict[tab_name]['display'].macros = json.dumps({"FILES": self.files_now})
         self.tab_dict[tab_name]['display'].filename = path.join(path.dirname(path.realpath(__file__)), 'plot_hdf5.py')
         self.tab_dict[tab_name]['layout'].addWidget(self.tab_dict[tab_name]['display'])
         self.tabWidget.setCurrentIndex(index)

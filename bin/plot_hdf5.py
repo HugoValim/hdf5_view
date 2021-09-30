@@ -1,12 +1,15 @@
 from collections import Counter
+import os
 from os import path
 import time
+import numpy as np
 from pydm import Display
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem, QHeaderView, QWidget, QCheckBox, QHBoxLayout
 import silx.io
 from silx.gui import qt
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, QCoreApplication, QTimer
+from PyQt5 import QtCore
 import fits
 import plot_actions
 
@@ -28,7 +31,7 @@ class MyDisplay(Display):
         """Loop to check if a curve is selected or not"""
         self.timer = QTimer()
         self.timer.timeout.connect(self.custom_signals)
-        self.timer.start(250) #trigger .25 seconds.
+        self.timer.start(250) #trigger every .25 seconds.
 
     def custom_signals(self):
         """If there is an active curve, do the stats for that"""
@@ -51,29 +54,36 @@ class MyDisplay(Display):
         self.curve_now = None
         self.checked_now = None
         self.monitor_checked_now = None
+        self.store_current_counters = []
+        self.store_current_motors= []
+        self.store_current_monitors = []
+        self.files = self.macros['FILES']
+        head, tail = os.path.split(self.files[0])
+        self.path = head
+        self.dir_files()
         self.new_buttons()
+        self.build_plot()
+
+    def build_plot(self):
         self.get_hdf5_data()
         self.assert_data()
         self.counter_checkboxes()
         self.motor_checkboxes()
         self.monitor_checkboxes()
         self.connect_check_boxes()
+        self.set_standard_plot(self.store_current_counters, self.store_current_motors, self.store_current_monitors)
         self.connections()
-        self.set_standard_plot()
         self.loop()
+
 
     def get_hdf5_data(self):
         """Read Scan data and store into dicts, also creates a dict with simplified data names"""
         self.counters_data = {}
         self.motors_data = {}
-        files = self.macros['FILE'].replace(' ', '').split('-')
-        self.files  = files
-        if '' in files:
-            files.remove('')
-        for file in files:
-            fo = open(self.macros['PATH'] + file)
+        for file in self.files:
+            fo = open(file)
             fo.close()
-            with silx.io.open(self.macros['PATH'] + file) as sf:
+            with silx.io.open(file) as sf:
                 self.data = sf
                 instrument = sf['Scan/scan_000/instrument']
                 for i in instrument:
@@ -82,6 +92,59 @@ class MyDisplay(Display):
                         self.motors_data[i + '__data__' + file] = instrument[i]['data'][:]
                     else:
                         self.counters_data[i + '__data__' + file] = instrument[i][i][:]
+
+    def dir_files(self):
+        row = 0
+        files = os.listdir(self.path)
+        files = [i for i in files if i.endswith('.hdf5')]
+        files.sort()  
+        for file in files:
+            with silx.io.open(os.path.join(self.path,file)) as sf:
+                instrument = sf['Scan/scan_000/instrument']
+                motors = ''
+                for i in instrument:
+                    # If the data is called 'data' them its a motor, otherwise its a counter
+                    if 'data' in instrument[i]:
+                        motors += i + ', '
+                motors = motors[:-2]
+            self.tableWidget.insertRow(row)
+            self.tableWidget.setItem(row, 0, QTableWidgetItem(file))
+            self.tableWidget.setItem(row, 1, QTableWidgetItem(motors))
+            # widget   = QWidget(parent=self.tableWidget)
+            # checkbox = QCheckBox()
+            # checkbox.setCheckState(QtCore.Qt.Unchecked)
+            # layoutH = QHBoxLayout(widget)
+            # layoutH.addWidget(checkbox)
+            # layoutH.setAlignment(QtCore.Qt.AlignCenter)
+            # layoutH.setContentsMargins(0, 0, 0, 0)           
+            # self.tableWidget.setCellWidget(row, 2, widget)                  # <----
+            # self.tableWidget.setItem(row, 2, QTableWidgetItem(str(row)))
+            checkbox = QtWidgets.QCheckBox(parent=self.tableWidget)
+            checkbox.clicked.connect(self.on_state_changed)
+            self.tableWidget.setCellWidget(row, 2, checkbox)
+            full_file_path = self.path + '/' + file
+            if full_file_path in self.files: 
+                checkbox.setChecked(True)
+            row += 1
+
+        header = self.tableWidget.horizontalHeader()
+        # header.setResizeMode(0, QtGui.QHeaderView.Stretch)
+        header.setResizeMode(0, QHeaderView.ResizeToContents)
+        header.setResizeMode(1, QHeaderView.ResizeToContents)
+        header.setResizeMode(2, QHeaderView.ResizeToContents)
+
+    def on_state_changed(self):
+        ch = self.sender()
+        ix = self.tableWidget.indexAt(ch.pos())
+        file_now = self.tableWidget.item(ix.row(), 0).text()
+        full_file_path = self.path + '/' + file_now
+        if ch.isChecked():
+            self.files.append(full_file_path)
+        else:
+            self.files.remove(full_file_path)
+        self.clear_all()
+        self.build_plot()
+
 
     def assert_data(self):
         """Check if the files have difference between motor and counters, and also provides simplified data labels for the plot"""
@@ -202,6 +265,15 @@ class MyDisplay(Display):
         for i in self.simplified_counter_data:
             for file in self.files:
                 try:
+                    assert isinstance(self.counters_data[i + '__data__' + file], (list, tuple, np.ndarray))
+                    if self.monitor_checked_now:
+                        assert isinstance(self.counters_data[self.monitor_checked_now + '__data__' + file], (list, tuple, np.ndarray))
+                    if self.checked_now:
+                        assert isinstance(self.motors_data[self.checked_now + '__data__' + file], (list, tuple, np.ndarray))
+                except KeyError as e:
+                    pass
+                    # print(e)
+                else:
                     if self.monitor_checked_now:
                         data = self.counters_data[i + '__data__' + file]/self.counters_data[self.monitor_checked_now + '__data__' + file]
                     else:
@@ -218,8 +290,7 @@ class MyDisplay(Display):
                         self.plot.getCurve(i + '__data__' + file)
                     else:
                         self.plot.remove(i + '__data__' + file)
-                except:
-                    pass
+
         self.plot.resetZoom()
 
     def new_buttons(self):
@@ -232,15 +303,16 @@ class MyDisplay(Display):
         action = plot_actions.Derivative(self.plot, parent=self.plot)
         toolbar.addAction(action)
 
-    def set_standard_plot(self):
-        if len(self.dict_motors.keys()) != 0:
-            keys = self.dict_motors.keys()
-            value_iterator = iter(keys)
-            first_key = next(value_iterator)
-            self.dict_motors[first_key].setChecked(True)
-            self.checked_now = first_key
-        for counter in self.dict_counters.values():
-            counter.setChecked(True)
+    def set_standard_plot(self,counters, motors, monitors):
+        for counter in self.dict_counters.keys():
+            if counter in counters:
+                self.dict_counters[counter].setChecked(True)
+        for motor in self.dict_motors.keys():
+            if motor in motors:
+                self.dict_motors[motor].setChecked(True)
+        for monitor in self.dict_monitors.keys():
+            if monitor in monitors:
+                self.dict_monitors[monitor].setChecked(True)
         self.set_plot()
 
     def update_stat(self):
@@ -259,3 +331,20 @@ class MyDisplay(Display):
         self.ui.label_peak.setText(str(self.peak))
         self.ui.label_peak_pos.setText(str(self.peak_pos))
         self.ui.label_com.setText(str(self.com))
+
+    def clear_all(self):
+        self.store_current_counters = []
+        self.store_current_motors = []
+        self.store_current_monitors = []
+        for i in self.dict_counters.keys():
+            if self.dict_counters[i].isChecked():
+                self.store_current_counters.append(i)
+        for i in self.dict_motors.keys():
+            if self.dict_motors[i].isChecked():
+                self.store_current_motors.append(i)
+        for i in self.dict_monitors.keys():
+            if self.dict_monitors[i].isChecked():
+                self.store_current_monitors.append(i)
+        for i in reversed(range(self.gridLayout.count())): 
+            self.gridLayout.itemAt(i).widget().setParent(None)
+        self.plot.clear()

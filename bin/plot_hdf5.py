@@ -16,7 +16,6 @@ import fits
 import plot_actions
 
 class MyDisplay(Display):
-    curveClicked = pyqtSignal()
 
     def __init__(self, parent=None, args=None, macros=None):
         super(MyDisplay, self).__init__(parent=parent, args=args, macros=macros)
@@ -37,18 +36,18 @@ class MyDisplay(Display):
 
     def custom_signals(self):
         """If there is an active curve, do the stats for that"""
-        if self.plot.getActiveCurve():
-            if self.curve_now != self.plot.getActiveCurve().getLegend():
-                self.curveClicked.emit()
-                self.curve_now = self.plot.getActiveCurve().getLegend()
-        else:
-            self.curve_now = None
-            self.ui.label_fwhm.setText(str(''))
-            self.ui.label_fwhm_pos.setText(str(''))
-            self.ui.label_peak.setText(str(''))
-            self.ui.label_peak_pos.setText(str(''))
-            self.ui.label_com.setText(str(''))
 
+        self.legend_widget.updateLegends()
+        dir_files = os.listdir(self.path)
+        dir_files = [i for i in dir_files if i.endswith('.hdf5')]
+        dir_files.sort() 
+        if dir_files != self.dir_files:
+            self.clear_table_files()           
+
+    def clear_table_files(self):
+        self.tableWidget.clearContents()
+        self.tableWidget.setRowCount(0)
+        self.table_files()
 
     def initializa_setup(self):
         """Initialize all setup variables"""
@@ -62,10 +61,10 @@ class MyDisplay(Display):
         self.files = self.macros['FILES']
         head, tail = os.path.split(self.files[0])
         self.path = head
-        self.dir_files()
+        self.table_files()
         self.new_buttons()
         self.build_plot()
-        self.legend()
+        self.legend_widget()
 
     def build_plot(self):
         self.get_hdf5_data()
@@ -78,8 +77,9 @@ class MyDisplay(Display):
         self.connections()
         self.loop()
 
-    def legend(self):
-        self.verticalLayout_left.addWidget(LegendSelector.LegendsDockWidget(parent=self, plot = self.plot))
+    def legend_widget(self):
+        self.legend_widget = LegendSelector.LegendsDockWidget(parent=self, plot = self.plot)
+        self.verticalLayout_left.addWidget(self.legend_widget)
 
     def get_hdf5_data(self):
         """Read Scan data and store into dicts, also creates a dict with simplified data names"""
@@ -104,12 +104,12 @@ class MyDisplay(Display):
         mt = str(datetime.datetime.fromtimestamp(t))[:-7]
         return mt
 
-    def dir_files(self):
+    def table_files(self):
         row = 0
-        files = os.listdir(self.path)
-        files = [i for i in files if i.endswith('.hdf5')]
-        files.sort()  
-        for file in files:
+        self.dir_files = os.listdir(self.path)
+        self.dir_files = [i for i in self.dir_files if i.endswith('.hdf5')]
+        self.dir_files.sort()  
+        for file in self.dir_files:
             date = self.modification_date(os.path.join(self.path,file))
             with silx.io.open(os.path.join(self.path,file)) as sf:
                 instrument = sf['Scan/scan_000/instrument']
@@ -196,7 +196,20 @@ class MyDisplay(Display):
 
     def connections(self):
         """Do the connections"""
-        self.curveClicked.connect(self.update_stat)
+        self.plot.sigPlotSignal.connect(self.plot_signal_handler)
+        self.plot.sigActiveCurveChanged.connect(self.update_stat)
+
+    def oi(self):
+        print('oi')
+
+    def plot_signal_handler(self, dict_):
+        # if dict_['event'] == 'curveClicked':
+        #     print(dict_['label'])
+        #     print(self.plot.getActiveCurve())
+        #     if self.plot.getActiveCurve() is not None:
+        #         self.update_stat()
+        # print(dict_)
+        pass
 
     def connect_check_boxes(self):
         """Connect all check boxes to methods"""
@@ -336,21 +349,29 @@ class MyDisplay(Display):
         self.set_plot()
 
     def update_stat(self):
-        activeCurve = self.plot.getActiveCurve()
-        x0 = activeCurve.getXData()
-        y0 = activeCurve.getYData()
-        self.stats = fits.fitGauss(x0,y0)
-        self.peak = self.stats[0]
-        self.peak_pos = self.stats[1]
-        self.fwhm = self.stats[4]
-        self.fwhm_pos = self.stats[5]
-        self.com = self.stats[6]
-        # Update labels
-        self.ui.label_fwhm.setText(str(self.fwhm))
-        self.ui.label_fwhm_pos.setText(str(self.fwhm_pos))
-        self.ui.label_peak.setText(str(self.peak))
-        self.ui.label_peak_pos.setText(str(self.peak_pos))
-        self.ui.label_com.setText(str(self.com))
+
+        if self.plot.getActiveCurve() is not None:
+            activeCurve = self.plot.getActiveCurve()
+            x0 = activeCurve.getXData()
+            y0 = activeCurve.getYData()
+            self.stats = fits.fitGauss(x0,y0)
+            self.peak = self.stats[0]
+            self.peak_pos = self.stats[1]
+            self.fwhm = self.stats[4]
+            self.fwhm_pos = self.stats[5]
+            self.com = self.stats[6]
+            # Update labels
+            self.ui.label_fwhm.setText(str(self.fwhm))
+            self.ui.label_fwhm_pos.setText(str(self.fwhm_pos))
+            self.ui.label_peak.setText(str(self.peak))
+            self.ui.label_peak_pos.setText(str(self.peak_pos))
+            self.ui.label_com.setText(str(self.com))
+        else:
+            self.ui.label_fwhm.setText(str(''))
+            self.ui.label_fwhm_pos.setText(str(''))
+            self.ui.label_peak.setText(str(''))
+            self.ui.label_peak_pos.setText(str(''))
+            self.ui.label_com.setText(str(''))
 
     def clear_all(self):
         self.store_current_counters = []

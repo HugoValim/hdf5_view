@@ -70,8 +70,8 @@ class MyDisplay(Display):
 
     def plot_tab(self, items):
         """Manage all plot tab and load an embedded display for it chunk of files selected in browser file menu"""
-        tab_index = self.tabWidget.count()
-        tab_name = 'Plot ' + str(tab_index)
+        tab_index = self.tabWidget.count() + 1
+        tab_name = 'Plot ' + str(tab_index).zfill(4)
         self.tab_dict[tab_name] = {'widget' : QtWidgets.QWidget()}
         index = self.tabWidget.addTab(self.tab_dict[tab_name]['widget'], tab_name)
         self.tab_dict[tab_name]['layout'] = QHBoxLayout()

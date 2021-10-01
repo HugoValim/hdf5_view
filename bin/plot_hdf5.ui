@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1048</width>
+    <width>1242</width>
     <height>657</height>
    </rect>
   </property>
@@ -93,17 +93,41 @@
         </widget>
        </item>
        <item>
-        <layout class="QGridLayout" name="gridLayout">
-         <property name="leftMargin">
-          <number>0</number>
+        <widget class="QTableWidget" name="tableWidget_plot">
+         <property name="maximumSize">
+          <size>
+           <width>550</width>
+           <height>16777215</height>
+          </size>
          </property>
-         <property name="bottomMargin">
-          <number>0</number>
+         <property name="sizeAdjustPolicy">
+          <enum>QAbstractScrollArea::AdjustIgnored</enum>
          </property>
-         <property name="spacing">
-          <number>0</number>
+         <property name="alternatingRowColors">
+          <bool>true</bool>
          </property>
-        </layout>
+         <property name="showGrid">
+          <bool>false</bool>
+         </property>
+         <property name="cornerButtonEnabled">
+          <bool>true</bool>
+         </property>
+         <column>
+          <property name="text">
+           <string>Motors</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Counters</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Monitors</string>
+          </property>
+         </column>
+        </widget>
        </item>
       </layout>
      </item>

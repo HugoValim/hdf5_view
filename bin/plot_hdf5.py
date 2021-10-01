@@ -44,11 +44,6 @@ class MyDisplay(Display):
         if dir_files != self.dir_files:
             self.clear_table_files()           
 
-    def clear_table_files(self):
-        self.tableWidget.clearContents()
-        self.tableWidget.setRowCount(0)
-        self.table_files()
-
     def initializa_setup(self):
         """Initialize all setup variables"""
         self.plot = self.ui.plotwindow
@@ -69,10 +64,8 @@ class MyDisplay(Display):
     def build_plot(self):
         self.get_hdf5_data()
         self.assert_data()
-        self.counter_checkboxes()
-        self.motor_checkboxes()
-        self.monitor_checkboxes()
-        self.connect_check_boxes()
+        self.build_plot_table()
+        # self.connect_check_boxes()
         self.set_standard_plot(self.store_current_counters, self.store_current_motors, self.store_current_monitors)
         self.connections()
         self.loop()
@@ -199,9 +192,6 @@ class MyDisplay(Display):
         self.plot.sigPlotSignal.connect(self.plot_signal_handler)
         self.plot.sigActiveCurveChanged.connect(self.update_stat)
 
-    def oi(self):
-        print('oi')
-
     def plot_signal_handler(self, dict_):
         # if dict_['event'] == 'curveClicked':
         #     print(dict_['label'])
@@ -211,48 +201,48 @@ class MyDisplay(Display):
         # print(dict_)
         pass
 
-    def connect_check_boxes(self):
-        """Connect all check boxes to methods"""
-        for i in self.simplified_counter_data:
-            self.dict_counters[i].clicked.connect(self.set_plot)
-        for i in self.simplified_motor_data:
-            self.dict_motors[i].clicked.connect(self.uncheck_other_motors)
-        for i in self.simplified_counter_data:
-            self.dict_monitors[i].clicked.connect(self.uncheck_other_monitors)
+    def build_plot_table(self):
+        row_size = max([len(self.simplified_counter_data), len(self.simplified_motor_data)])
+        self.tableWidget_plot.setRowCount(row_size)
+        self.counter_checkboxes()
+        self.motor_checkboxes()
+        self.monitor_checkboxes()
+        header = self.tableWidget_plot.horizontalHeader()
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
 
     def counter_checkboxes(self):
         """Create counter checkboxes in ther tab interface"""
         self.dict_counters = {}
-        pos = 1
+        row = 0
         for i in self.simplified_counter_data:
-            self.dict_counters[i] = QtWidgets.QCheckBox()
-            self.ui.gridLayout.addWidget(self.dict_counters[i], pos, 1)
+            self.dict_counters[i] = QtWidgets.QCheckBox(parent=self.tableWidget_plot)
+            self.dict_counters[i].clicked.connect(self.set_plot)
+            self.tableWidget_plot.setCellWidget(row, 1, self.dict_counters[i])
             self.dict_counters[i].setText(i)
-            pos += 1
-
+            row += 1
     def motor_checkboxes(self):
         """Create motor checkboxes in ther tab interface"""
         self.dict_motors = {}
-        pos  = 1
+        row = 0
         for i in self.simplified_motor_data:
-            self.dict_motors[i] = QtWidgets.QCheckBox()
-            self.ui.gridLayout.addWidget(self.dict_motors[i], pos, 0)
+            self.dict_motors[i] = QtWidgets.QCheckBox(parent=self.tableWidget_plot)
+            self.dict_motors[i].clicked.connect(self.uncheck_other_motors)
+            self.tableWidget_plot.setCellWidget(row, 0, self.dict_motors[i])
             self.dict_motors[i].setText(i)
-            pos += 1
-        # For layout purposes
-        while pos < 10:
-            self.ui.gridLayout.addWidget(QtWidgets.QLabel(), pos, 0)
-            pos += 1
-
+            row += 1
+        
     def monitor_checkboxes(self):
         """Create counter checkboxes in ther tab interface"""
         self.dict_monitors = {}
-        pos = 1
+        row = 0
         for i in self.simplified_counter_data:
-            self.dict_monitors[i] = QtWidgets.QCheckBox()
-            self.ui.gridLayout.addWidget(self.dict_monitors[i], pos, 2)
+            self.dict_monitors[i] = QtWidgets.QCheckBox(parent=self.tableWidget_plot)
+            self.dict_monitors[i].clicked.connect(self.uncheck_other_monitors)
+            self.tableWidget_plot.setCellWidget(row, 2, self.dict_monitors[i])
             self.dict_monitors[i].setText(i)
-            pos += 1
+            row += 1
 
     def uncheck_other_motors(self):
         """Logic to permit only one check box to be checked"""
@@ -373,6 +363,12 @@ class MyDisplay(Display):
             self.ui.label_peak_pos.setText(str(''))
             self.ui.label_com.setText(str(''))
 
+
+    def clear_table_files(self):
+        self.tableWidget.clearContents()
+        self.tableWidget.setRowCount(0)
+        self.table_files()
+
     def clear_all(self):
         self.store_current_counters = []
         self.store_current_motors = []
@@ -386,6 +382,7 @@ class MyDisplay(Display):
         for i in self.dict_monitors.keys():
             if self.dict_monitors[i].isChecked():
                 self.store_current_monitors.append(i)
-        for i in reversed(range(self.gridLayout.count())): 
-            self.gridLayout.itemAt(i).widget().setParent(None)
+        self.tableWidget_plot.clearContents()
+        self.tableWidget_plot.setRowCount(0)
         self.plot.clear()
+

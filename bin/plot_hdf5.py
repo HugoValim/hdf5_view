@@ -2,12 +2,14 @@ from collections import Counter
 import os
 from os import path
 import time
+import datetime
 import numpy as np
 from pydm import Display
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem, QHeaderView, QWidget, QCheckBox, QHBoxLayout
 import silx.io
 from silx.gui import qt
+from silx.gui.plot import LegendSelector
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, QCoreApplication, QTimer
 from PyQt5 import QtCore
 import fits
@@ -63,6 +65,7 @@ class MyDisplay(Display):
         self.dir_files()
         self.new_buttons()
         self.build_plot()
+        self.legend()
 
     def build_plot(self):
         self.get_hdf5_data()
@@ -75,6 +78,8 @@ class MyDisplay(Display):
         self.connections()
         self.loop()
 
+    def legend(self):
+        self.verticalLayout_left.addWidget(LegendSelector.LegendsDockWidget(parent=self, plot = self.plot))
 
     def get_hdf5_data(self):
         """Read Scan data and store into dicts, also creates a dict with simplified data names"""
@@ -85,13 +90,19 @@ class MyDisplay(Display):
             fo.close()
             with silx.io.open(file) as sf:
                 self.data = sf
+                head, tail = os.path.split(file)
                 instrument = sf['Scan/scan_000/instrument']
                 for i in instrument:
                     # If the data is called 'data' them its a motor, otherwise its a counter
                     if 'data' in instrument[i]:
-                        self.motors_data[i + '__data__' + file] = instrument[i]['data'][:]
+                        self.motors_data[i + '__data__' + tail] = instrument[i]['data'][:]
                     else:
-                        self.counters_data[i + '__data__' + file] = instrument[i][i][:]
+                        self.counters_data[i + '__data__' + tail] = instrument[i][i][:]
+
+    def modification_date(self, filename):
+        t = os.path.getmtime(filename)
+        mt = str(datetime.datetime.fromtimestamp(t))[:-7]
+        return mt
 
     def dir_files(self):
         row = 0
@@ -99,17 +110,23 @@ class MyDisplay(Display):
         files = [i for i in files if i.endswith('.hdf5')]
         files.sort()  
         for file in files:
+            date = self.modification_date(os.path.join(self.path,file))
             with silx.io.open(os.path.join(self.path,file)) as sf:
                 instrument = sf['Scan/scan_000/instrument']
                 motors = ''
+                len_points = 0
                 for i in instrument:
                     # If the data is called 'data' them its a motor, otherwise its a counter
                     if 'data' in instrument[i]:
                         motors += i + ', '
+                        len_points = str(len(instrument[i]['data']))
                 motors = motors[:-2]
             self.tableWidget.insertRow(row)
             self.tableWidget.setItem(row, 0, QTableWidgetItem(file))
             self.tableWidget.setItem(row, 1, QTableWidgetItem(motors))
+            self.tableWidget.setItem(row, 2, QTableWidgetItem(len_points))
+            self.tableWidget.setItem(row, 3, QTableWidgetItem(date))
+            # self.tableWidget.setItem(row, 3, QTableWidgetItem(date))
             # widget   = QWidget(parent=self.tableWidget)
             # checkbox = QCheckBox()
             # checkbox.setCheckState(QtCore.Qt.Unchecked)
@@ -121,17 +138,19 @@ class MyDisplay(Display):
             # self.tableWidget.setItem(row, 2, QTableWidgetItem(str(row)))
             checkbox = QtWidgets.QCheckBox(parent=self.tableWidget)
             checkbox.clicked.connect(self.on_state_changed)
-            self.tableWidget.setCellWidget(row, 2, checkbox)
+            self.tableWidget.setCellWidget(row, 4, checkbox)
             full_file_path = self.path + '/' + file
             if full_file_path in self.files: 
                 checkbox.setChecked(True)
             row += 1
 
         header = self.tableWidget.horizontalHeader()
-        # header.setResizeMode(0, QtGui.QHeaderView.Stretch)
+        # # header.setResizeMode(0, QtGui.QHeaderView.Stretch)
         header.setResizeMode(0, QHeaderView.ResizeToContents)
         header.setResizeMode(1, QHeaderView.ResizeToContents)
         header.setResizeMode(2, QHeaderView.ResizeToContents)
+        header.setResizeMode(3, QHeaderView.ResizeToContents)
+        header.setResizeMode(4, QHeaderView.ResizeToContents)
 
     def on_state_changed(self):
         ch = self.sender()
@@ -164,16 +183,16 @@ class MyDisplay(Display):
         # for key in counters_count.keys():
         #     if counters_count[key] != len(self.files):
         #         flag_diff = True
-        if flag_diff:
-               msg = QMessageBox()
-               msg.setIcon(QMessageBox.Information)
-               msg.setText("There is a difference between counters/motors in the selected files")
-               msg.setInformativeText("Some counters and/or motors are not present in all the files")
-               msg.setWindowTitle("Warning")
-               # msg.setDetailedText("The details are as follows:")
-               msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-               # msg.buttonClicked.connect(msgbtn)
-               retval = msg.exec_()
+        # if flag_diff:
+        #        msg = QMessageBox()
+        #        msg.setIcon(QMessageBox.Information)
+        #        msg.setText("There is a difference between counters/motors in the selected files")
+        #        msg.setInformativeText("Some counters and/or motors are not present in all the files")
+        #        msg.setWindowTitle("Warning")
+        #        # msg.setDetailedText("The details are as follows:")
+        #        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        #        # msg.buttonClicked.connect(msgbtn)
+        #        retval = msg.exec_()
 
     def connections(self):
         """Do the connections"""
@@ -264,32 +283,33 @@ class MyDisplay(Display):
         """Plot the data"""
         for i in self.simplified_counter_data:
             for file in self.files:
+                head, tail = os.path.split(file)
                 try:
-                    assert isinstance(self.counters_data[i + '__data__' + file], (list, tuple, np.ndarray))
+                    assert isinstance(self.counters_data[i + '__data__' + tail], (list, tuple, np.ndarray))
                     if self.monitor_checked_now:
-                        assert isinstance(self.counters_data[self.monitor_checked_now + '__data__' + file], (list, tuple, np.ndarray))
+                        assert isinstance(self.counters_data[self.monitor_checked_now + '__data__' + tail], (list, tuple, np.ndarray))
                     if self.checked_now:
-                        assert isinstance(self.motors_data[self.checked_now + '__data__' + file], (list, tuple, np.ndarray))
+                        assert isinstance(self.motors_data[self.checked_now + '__data__' + tail], (list, tuple, np.ndarray))
                 except KeyError as e:
                     pass
                     # print(e)
                 else:
                     if self.monitor_checked_now:
-                        data = self.counters_data[i + '__data__' + file]/self.counters_data[self.monitor_checked_now + '__data__' + file]
+                        data = self.counters_data[i + '__data__' + tail]/self.counters_data[self.monitor_checked_now + '__data__' + tail]
                     else:
-                        data = self.counters_data[i + '__data__' + file]
+                        data = self.counters_data[i + '__data__' + tail]
                     if self.checked_now:
                         self.plot.getXAxis().setLabel(self.checked_now)
-                        self.plot.addCurve(self.motors_data[self.checked_now + '__data__' + file], data, legend = i + '__data__' + file)
+                        self.plot.addCurve(self.motors_data[self.checked_now + '__data__' + tail], data, legend = i + '__data__' + tail)
                     else:
                         self.plot.getXAxis().setLabel("Points")
                         points = [i for i in range(len(data))]
-                        self.plot.addCurve(points, data, legend = i + '__data__' + file)
+                        self.plot.addCurve(points, data, legend = i + '__data__' + tail)
                 
                     if self.dict_counters[i].isChecked():
-                        self.plot.getCurve(i + '__data__' + file)
+                        self.plot.getCurve(i + '__data__' + tail)
                     else:
-                        self.plot.remove(i + '__data__' + file)
+                        self.plot.remove(i + '__data__' + tail)
 
         self.plot.resetZoom()
 

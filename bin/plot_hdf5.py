@@ -32,12 +32,17 @@ class MyDisplay(Display):
         """Loop to check if a curve is selected or not"""
         self.timer = QTimer()
         self.timer.timeout.connect(self.custom_signals)
-        self.timer.start(250) #trigger every .25 seconds.
+        self.timer.start(1000) #trigger every .25 seconds.
+
+    def keyPressEvent(self, event):
+        """Connect keys to methods"""
+        if event.key() == QtCore.Qt.Key_Return:
+            self.check_selected_checkboxes()
 
     def custom_signals(self):
         """If there is an active curve, do the stats for that"""
 
-        self.legend_widget.updateLegends()
+        # self.legend_widget.updateLegends()
         dir_files = os.listdir(self.path)
         dir_files = [i for i in dir_files if i.endswith('.hdf5')]
         dir_files.sort() 
@@ -57,6 +62,7 @@ class MyDisplay(Display):
         head, tail = os.path.split(self.files[0])
         self.path = head
         self.table_files()
+        self.table_stats_layout()
         self.new_buttons()
         self.build_plot()
         self.legend_widget()
@@ -73,6 +79,7 @@ class MyDisplay(Display):
     def legend_widget(self):
         self.legend_widget = LegendSelector.LegendsDockWidget(parent=self, plot = self.plot)
         self.verticalLayout_left.addWidget(self.legend_widget)
+        self.legend_widget.setMaximumWidth(500)
 
     def get_hdf5_data(self):
         """Read Scan data and store into dicts, also creates a dict with simplified data names"""
@@ -99,6 +106,7 @@ class MyDisplay(Display):
 
     def table_files(self):
         row = 0
+        self.table_checkboxes = {}
         self.dir_files = os.listdir(self.path)
         self.dir_files = [i for i in self.dir_files if i.endswith('.hdf5')]
         self.dir_files.sort()  
@@ -119,31 +127,34 @@ class MyDisplay(Display):
             self.tableWidget.setItem(row, 1, QTableWidgetItem(motors))
             self.tableWidget.setItem(row, 2, QTableWidgetItem(len_points))
             self.tableWidget.setItem(row, 3, QTableWidgetItem(date))
-            # self.tableWidget.setItem(row, 3, QTableWidgetItem(date))
-            # widget   = QWidget(parent=self.tableWidget)
-            # checkbox = QCheckBox()
-            # checkbox.setCheckState(QtCore.Qt.Unchecked)
-            # layoutH = QHBoxLayout(widget)
-            # layoutH.addWidget(checkbox)
-            # layoutH.setAlignment(QtCore.Qt.AlignCenter)
-            # layoutH.setContentsMargins(0, 0, 0, 0)           
-            # self.tableWidget.setCellWidget(row, 2, widget)                  # <----
-            # self.tableWidget.setItem(row, 2, QTableWidgetItem(str(row)))
-            checkbox = QtWidgets.QCheckBox(parent=self.tableWidget)
-            checkbox.clicked.connect(self.on_state_changed)
-            self.tableWidget.setCellWidget(row, 4, checkbox)
+            widget   = QWidget(parent=self.tableWidget)
+            self.table_checkboxes[file] = QCheckBox()
+            self.table_checkboxes[file].setCheckState(QtCore.Qt.Unchecked)
+            layoutH = QHBoxLayout(widget)
+            layoutH.addWidget(self.table_checkboxes[file])
+            layoutH.setAlignment(QtCore.Qt.AlignCenter)
+            layoutH.setContentsMargins(10, 0, 0, 0)           
+            self.tableWidget.setCellWidget(row, 4, widget)
             full_file_path = self.path + '/' + file
             if full_file_path in self.files: 
-                checkbox.setChecked(True)
+                self.table_checkboxes[file].setChecked(True)
+            self.table_checkboxes[file].stateChanged.connect(self.on_state_changed)
+            self.tableWidget.setCellWidget(row, 4, self.table_checkboxes[file])
             row += 1
 
         header = self.tableWidget.horizontalHeader()
         # # header.setResizeMode(0, QtGui.QHeaderView.Stretch)
-        header.setResizeMode(0, QHeaderView.ResizeToContents)
+        header.setResizeMode(0, QHeaderView.Stretch)
         header.setResizeMode(1, QHeaderView.ResizeToContents)
         header.setResizeMode(2, QHeaderView.ResizeToContents)
         header.setResizeMode(3, QHeaderView.ResizeToContents)
         header.setResizeMode(4, QHeaderView.ResizeToContents)
+
+    def check_selected_checkboxes(self):
+        selected_rows = [i.row() for i in self.tableWidget.selectedItems()]
+        for row in set(selected_rows):
+            file_now = self.tableWidget.item(row, 0).text()
+            self.table_checkboxes[file_now].setChecked(True)
 
     def on_state_changed(self):
         ch = self.sender()
@@ -338,7 +349,16 @@ class MyDisplay(Display):
                 self.dict_monitors[monitor].setChecked(True)
         self.set_plot()
 
+    def table_stats_layout(self):
+        header = self.tableWidget_stats.horizontalHeader()
+        header.setResizeMode(0, QHeaderView.Stretch)
+        header.setResizeMode(1, QHeaderView.Stretch)
+        header.setResizeMode(2, QHeaderView.Stretch)
+        header.setResizeMode(3, QHeaderView.Stretch)
+
     def update_stat(self):
+
+        fmt = lambda x: str("{:.5f}".format(float(x)))
 
         if self.plot.getActiveCurve() is not None:
             activeCurve = self.plot.getActiveCurve()
@@ -347,21 +367,27 @@ class MyDisplay(Display):
             self.stats = fits.fitGauss(x0,y0)
             self.peak = self.stats[0]
             self.peak_pos = self.stats[1]
+            self.min = self.stats[2]
+            self.min_pos = self.stats[3]
             self.fwhm = self.stats[4]
             self.fwhm_pos = self.stats[5]
             self.com = self.stats[6]
-            # Update labels
-            self.ui.label_fwhm.setText(str(self.fwhm))
-            self.ui.label_fwhm_pos.setText(str(self.fwhm_pos))
-            self.ui.label_peak.setText(str(self.peak))
-            self.ui.label_peak_pos.setText(str(self.peak_pos))
-            self.ui.label_com.setText(str(self.com))
+            # Update table
+            self.tableWidget_stats.setItem(0, 1, QTableWidgetItem(fmt(self.fwhm)))
+            self.tableWidget_stats.setItem(0, 3, QTableWidgetItem(fmt(self.fwhm_pos)))
+            self.tableWidget_stats.setItem(1, 1, QTableWidgetItem(fmt(self.peak)))
+            self.tableWidget_stats.setItem(1, 3, QTableWidgetItem(fmt(self.peak_pos)))
+            self.tableWidget_stats.setItem(2, 1, QTableWidgetItem(fmt(self.min)))
+            self.tableWidget_stats.setItem(2, 3, QTableWidgetItem(fmt(self.min_pos)))
+            self.tableWidget_stats.setItem(3, 1, QTableWidgetItem(fmt(self.com)))
         else:
-            self.ui.label_fwhm.setText(str(''))
-            self.ui.label_fwhm_pos.setText(str(''))
-            self.ui.label_peak.setText(str(''))
-            self.ui.label_peak_pos.setText(str(''))
-            self.ui.label_com.setText(str(''))
+            self.tableWidget_stats.setItem(0, 1, QTableWidgetItem(''))
+            self.tableWidget_stats.setItem(0, 3, QTableWidgetItem(''))
+            self.tableWidget_stats.setItem(1, 1, QTableWidgetItem(''))
+            self.tableWidget_stats.setItem(1, 3, QTableWidgetItem(''))
+            self.tableWidget_stats.setItem(2, 1, QTableWidgetItem(''))
+            self.tableWidget_stats.setItem(2, 3, QTableWidgetItem(''))
+            self.tableWidget_stats.setItem(3, 1, QTableWidgetItem(''))
 
 
     def clear_table_files(self):

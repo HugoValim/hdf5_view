@@ -6,7 +6,7 @@ import datetime
 import numpy as np
 from pydm import Display
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem, QHeaderView, QWidget, QCheckBox, QHBoxLayout
+from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem, QHeaderView, QWidget, QCheckBox, QHBoxLayout, QSplitter
 import silx.io
 from silx.gui import qt
 from silx.gui.plot import LegendSelector
@@ -38,6 +38,8 @@ class MyDisplay(Display):
         """Connect keys to methods"""
         if event.key() == QtCore.Qt.Key_Return:
             self.check_selected_checkboxes()
+        if event.key() == QtCore.Qt.Key_Escape:
+            self.uncheck_selected_checkboxes()
 
     def custom_signals(self):
         """If there is an active curve, do the stats for that"""
@@ -61,25 +63,65 @@ class MyDisplay(Display):
         self.files = self.macros['FILES']
         head, tail = os.path.split(self.files[0])
         self.path = head
+        self.__legend_widget()
         self.table_files()
         self.table_stats_layout()
         self.new_buttons()
+        self.build_splitable_layout()
         self.build_plot()
-        self.legend_widget()
+        
+
+    def build_splitable_layout(self):
+        splitter_frames = QSplitter(QtCore.Qt.Horizontal)
+        splitter_frames.addWidget(self.frame_left)
+        splitter_frames.addWidget(self.frame_right)
+        splitter_frames.setCollapsible(0,False)
+        splitter_frames.setCollapsible(1,False)
+        splitter_frames.setStretchFactor(0, 1)
+        splitter_frames.setStretchFactor(1, 1)
+        splitter_frames.setSizes([450, 200])
+        self.horizontalLayout.addWidget(splitter_frames)
+
+        splitter_tables = QSplitter(QtCore.Qt.Vertical)
+        splitter_tables.addWidget(self.tableWidget)
+        splitter_tables.addWidget(self.tableWidget_plot)
+        splitter_tables.addWidget(self.legend_widget)
+        splitter_tables.setCollapsible(0,False)
+        splitter_tables.setCollapsible(1,False)
+        splitter_tables.setCollapsible(2,False)
+        splitter_tables.setStretchFactor(0, 1)
+        splitter_tables.setStretchFactor(1, 1)
+        splitter_tables.setStretchFactor(2, 1)
+        # splitter_frames.setSizes([450, 200])
+        self.verticalLayout_left.addWidget(splitter_tables)
+
+
+        splitter_plot_stat = QSplitter(QtCore.Qt.Vertical)
+        splitter_plot_stat.addWidget(self.plot)
+        splitter_plot_stat.addWidget(self.tableWidget_stats)
+        splitter_plot_stat.setCollapsible(0,False)
+        splitter_plot_stat.setCollapsible(1,False)
+        splitter_plot_stat.setStretchFactor(0, 1)
+        splitter_plot_stat.setStretchFactor(1, 1)
+        splitter_plot_stat.setSizes([900, 100])
+        self.verticalLayout.addWidget(splitter_plot_stat)
+
 
     def build_plot(self):
         self.get_hdf5_data()
         self.assert_data()
         self.build_plot_table()
-        # self.connect_check_boxes()
         self.set_standard_plot(self.store_current_counters, self.store_current_motors, self.store_current_monitors)
+        self.uncheck_other_motors()
+        self.uncheck_other_monitors()
         self.connections()
         self.loop()
 
-    def legend_widget(self):
+    def __legend_widget(self):
         self.legend_widget = LegendSelector.LegendsDockWidget(parent=self, plot = self.plot)
         self.verticalLayout_left.addWidget(self.legend_widget)
-        self.legend_widget.setMaximumWidth(500)
+        # self.legend_widget.setMaximumWidth(500)
+        self.legend_widget.setMinimumHeight(100)
 
     def get_hdf5_data(self):
         """Read Scan data and store into dicts, also creates a dict with simplified data names"""
@@ -145,9 +187,9 @@ class MyDisplay(Display):
         header = self.tableWidget.horizontalHeader()
         # # header.setResizeMode(0, QtGui.QHeaderView.Stretch)
         header.setResizeMode(0, QHeaderView.Stretch)
-        header.setResizeMode(1, QHeaderView.ResizeToContents)
-        header.setResizeMode(2, QHeaderView.ResizeToContents)
-        header.setResizeMode(3, QHeaderView.ResizeToContents)
+        header.setResizeMode(1, QHeaderView.Stretch)
+        header.setResizeMode(2, QHeaderView.Stretch)
+        header.setResizeMode(3, QHeaderView.Stretch)
         header.setResizeMode(4, QHeaderView.ResizeToContents)
 
     def check_selected_checkboxes(self):
@@ -155,6 +197,12 @@ class MyDisplay(Display):
         for row in set(selected_rows):
             file_now = self.tableWidget.item(row, 0).text()
             self.table_checkboxes[file_now].setChecked(True)
+
+    def uncheck_selected_checkboxes(self):
+        selected_rows = [i.row() for i in self.tableWidget.selectedItems()]
+        for row in set(selected_rows):
+            file_now = self.tableWidget.item(row, 0).text()
+            self.table_checkboxes[file_now].setChecked(False)
 
     def on_state_changed(self):
         ch = self.sender()

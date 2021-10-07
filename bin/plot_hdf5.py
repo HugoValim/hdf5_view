@@ -6,7 +6,7 @@ import datetime
 import numpy as np
 from pydm import Display
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem, QHeaderView, QWidget, QCheckBox, QHBoxLayout, QSplitter
+from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem, QHeaderView, QWidget, QCheckBox, QHBoxLayout, QSplitter, QApplication
 import silx.io
 from silx.gui import qt
 from silx.gui.plot import LegendSelector
@@ -19,6 +19,7 @@ class MyDisplay(Display):
 
     def __init__(self, parent=None, args=None, macros=None):
         super(MyDisplay, self).__init__(parent=parent, args=args, macros=macros)
+        self.app = QApplication.instance()
         self.macros = macros
         self.initializa_setup()
 
@@ -40,6 +41,11 @@ class MyDisplay(Display):
             self.check_selected_checkboxes()
         if event.key() == QtCore.Qt.Key_Escape:
             self.uncheck_selected_checkboxes()
+        if event.key() == QtCore.Qt.Key_F11:
+            if self.app.main_window.isFullScreen():
+                self.app.main_window.showNormal()
+            else:
+                self.app.main_window.showFullScreen()
 
     def custom_signals(self):
         """If there is an active curve, do the stats for that"""

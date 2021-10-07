@@ -21,16 +21,16 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="leftMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="bottomMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <item>
     <widget class="QTabWidget" name="tabWidget">
@@ -172,42 +172,11 @@
              <height>30</height>
             </size>
            </property>
-           <property name="palette">
-            <palette>
-             <active>
-              <colorrole role="Button">
-               <brush brushstyle="SolidPattern">
-                <color alpha="255">
-                 <red>0</red>
-                 <green>255</green>
-                 <blue>0</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </active>
-             <inactive>
-              <colorrole role="Button">
-               <brush brushstyle="SolidPattern">
-                <color alpha="255">
-                 <red>0</red>
-                 <green>255</green>
-                 <blue>0</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </inactive>
-             <disabled>
-              <colorrole role="Button">
-               <brush brushstyle="SolidPattern">
-                <color alpha="255">
-                 <red>0</red>
-                 <green>255</green>
-                 <blue>0</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </disabled>
-            </palette>
+           <property name="font">
+            <font>
+             <weight>50</weight>
+             <bold>false</bold>
+            </font>
            </property>
            <property name="text">
             <string>Open File</string>
@@ -255,14 +224,14 @@
    <header>pydm.widgets.drawing</header>
   </customwidget>
   <customwidget>
-   <class>QLogoLNLS</class>
-   <extends>PyDMDrawingImage</extends>
-   <header>sol_widgets.widgets.logo_lnls</header>
-  </customwidget>
-  <customwidget>
    <class>QLogoCNPEM</class>
    <extends>PyDMDrawingImage</extends>
    <header>sol_widgets.widgets.logo_cnpem</header>
+  </customwidget>
+  <customwidget>
+   <class>QLogoLNLS</class>
+   <extends>PyDMDrawingImage</extends>
+   <header>sol_widgets.widgets.logo_lnls</header>
   </customwidget>
  </customwidgets>
  <resources/>

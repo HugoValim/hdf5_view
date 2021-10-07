@@ -28,6 +28,12 @@ class MyDisplay(Display):
         """Connect keys to methods"""
         if event.key() == QtCore.Qt.Key_Delete:
             self.delete_tab()
+        if event.key() == QtCore.Qt.Key_F11:
+            if self.app.main_window.isFullScreen():
+                self.app.main_window.showNormal()
+            else:
+                self.app.main_window.showFullScreen()
+            
 
     def _createMenuBar(self):
         """Create the menu bar and shortcuts"""

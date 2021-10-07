@@ -55,6 +55,7 @@ class MyDisplay(Display):
         # self.app.setWindowState().showNormal()
         self.app.main_window.setWindowTitle('SOL-View')
         self.main_tab = True
+        self.tab_now = None
         self._createMenuBar()
         self.tab_dict = {}
         self.make_connections()
@@ -82,7 +83,7 @@ class MyDisplay(Display):
         """Open the file browser modified to accept more than 1 file selected"""
         options = FileDialog.Options()
         options |= FileDialog.DontUseNativeDialog
-        files, _ = FileDialog.getOpenFileNames(self,"QFileDialog.getOpenFileNames()", "","HDF5 files (*.hdf5);;All Files (*)", options=options)
+        files, _ = FileDialog.getOpenFileNames(self,"Select one or more files", "","HDF5 files (*.hdf5);;All Files (*)", options=options)
         self.show()
         if files:
             self.files_now = files
@@ -92,15 +93,26 @@ class MyDisplay(Display):
         if self.files_now:
             self.plot_tab(self.files_now)
 
-    def plot_tab(self, items):
-        """Manage all plot tab and load an embedded display for it chunk of files selected in browser file menu"""
-        
+    def tab_name_handler(self):
         if self.main_tab:
             self.tabWidget.removeTab(self.tabWidget.currentIndex())
             self.main_tab = False
+        if self.tab_now is not None:
+            a = self.tab_now
+            self.tab_now = None
+            return a
 
         tab_index = self.tabWidget.count() + 1
-        tab_name = 'Plot ' + str(tab_index).zfill(4)
+        tab_name = 'Plot ' + str(tab_index).zfill(3)
+        return tab_name
+
+
+
+    def plot_tab(self, items):
+        """Manage all plot tab and load an embedded display for it chunk of files selected in browser file menu"""
+        
+        tab_name = self.tab_name_handler()
+        
         self.tab_dict[tab_name] = {'widget' : QtWidgets.QWidget()}
         index = self.tabWidget.addTab(self.tab_dict[tab_name]['widget'], tab_name)
         self.tab_dict[tab_name]['layout'] = QHBoxLayout()
@@ -113,4 +125,7 @@ class MyDisplay(Display):
 
     def delete_tab(self):
         """Delte a tab from the tabWidget"""
+        self.tab_now = self.tabWidget.tabText(self.tabWidget.currentIndex())
         self.tabWidget.removeTab(self.tabWidget.currentIndex())
+
+

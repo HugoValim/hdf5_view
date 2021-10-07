@@ -54,6 +54,8 @@ class MyDisplay(Display):
     def initializa_setup(self):
         """Initialize all setup variables"""
         self.plot = self.ui.plotwindow
+        self.plot.setMinimumHeight(300)
+        self.plot.setMinimumWidth(400)
         self.curve_now = None
         self.checked_now = None
         self.monitor_checked_now = None
@@ -69,7 +71,8 @@ class MyDisplay(Display):
         self.new_buttons()
         self.build_splitable_layout()
         self.build_plot()
-        
+
+      
 
     def build_splitable_layout(self):
         splitter_frames = QSplitter(QtCore.Qt.Horizontal)

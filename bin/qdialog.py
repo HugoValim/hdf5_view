@@ -7,7 +7,6 @@ class FileDialog(QFileDialog):
     """Inherit the QFileDialog to change its behavior when selecting more than 1 file at a time"""
     def __init__(self, *args):
         QtGui.QFileDialog.__init__(self, *args)
-        self.setWindowTitle('oi')
         self.setOption(self.DontUseNativeDialog, True)
         self.setFileMode(self.ExistingFiles)
         btns = self.findChildren(QtGui.QPushButton)

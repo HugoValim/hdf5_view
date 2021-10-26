@@ -146,6 +146,11 @@ class MyDisplay(Display):
                 for i in instrument:
                     # If the data is called 'data' them its a motor, otherwise its a counter
                     if 'data' in instrument[i]:
+                        if 'data' in instrument[i]:
+                            attrs = [j for j in instrument[i].attrs]
+                            if 'shape' in attrs:
+                                if len(instrument[i].attrs['shape'].split(',')) >= 2:
+                                    continue
                         self.motors_data[i + '__data__' + tail] = instrument[i]['data'][:]
                     else:
                         self.counters_data[i + '__data__' + tail] = instrument[i][i][:]
@@ -170,6 +175,10 @@ class MyDisplay(Display):
                 for i in instrument:
                     # If the data is called 'data' them its a motor, otherwise its a counter
                     if 'data' in instrument[i]:
+                        attrs = [j for j in instrument[i].attrs]
+                        if 'shape' in attrs:
+                            if len(instrument[i].attrs['shape'].split(',')) >= 2:
+                                continue
                         motors += i + ', '
                         len_points = str(len(instrument[i]['data']))
                 motors = motors[:-2]

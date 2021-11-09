@@ -230,20 +230,7 @@
            <number>0</number>
           </property>
           <item>
-           <widget class="PlotWindow" name="plotwindow">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="animated">
-             <bool>true</bool>
-            </property>
-           </widget>
+           <widget class="Plot1D" name="plotwindow"/>
           </item>
           <item>
            <widget class="QTableWidget" name="tableWidget_stats">
@@ -525,6 +512,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>Plot1D</class>
+   <extends>PlotWindow</extends>
+   <header>silx.gui.plot.PlotWindow</header>
+  </customwidget>
   <customwidget>
    <class>PlotWidget</class>
    <extends>QMainWindow</extends>

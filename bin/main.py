@@ -5,7 +5,7 @@ import subprocess
 import json
 from pydm.widgets import PyDMEmbeddedDisplay
 from PyQt5 import QtWidgets, QtCore
-from qtpy.QtWidgets import (QVBoxLayout, QHBoxLayout, QGroupBox,
+from PyQt5.QtWidgets import (QVBoxLayout, QHBoxLayout, QGroupBox,
     QLabel, QLineEdit, QPushButton, QScrollArea, QFrame,
     QApplication, QWidget, QAction)
 from PyQt5.QtWidgets import QMenu
@@ -48,7 +48,8 @@ class MyDisplay(Display):
         open_action.setShortcut("Ctrl+o")
 
         menu_bar.addMenu(self.option_menu)
-        style_action = self.option_menu.addAction(QAction('Dark Theme', menu_bar, checkable=True))
+        act = QAction('Dark Theme', self.option_menu, checkable=True)
+        style_action = self.option_menu.addAction(act)
         for action in self.option_menu.actions():
             if action.text() == 'Dark Theme':
                 action.setChecked(True)

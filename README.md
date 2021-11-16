@@ -25,7 +25,8 @@ After opening a file, the main window will be shown. The table in the left side 
 
 To open several files at once, you can either select them in the file dialog or select all the files you want and press enter in the table. For instance, you could press Ctrl+a (select all) and then press ENTER to open all files in the current dir, to close all, press ESC instead.
 
-![Select several files.](images/open_multi_file.png "Select several files")
+![Select several files.](images/open_multi_file.png "Select several files.")
+![Select all.](images/select_all.png "Select all.")
 
 The GUI will work in tab mode if you go to File > Open and open another file:
 

@@ -19,17 +19,17 @@ Press ctrl+O or click in "Open File" to open a file. You can select one or sever
 
 ![Open file dialog.](images/open_dialog.png "Open file dialog")
 
-After opening a file, the main window will be shown. The table in the left side displays all the hdf5 files that are in same Dir as the one that you opened. You can use the table to sort the files by name, used motors, number of points and date. You can also open the other files if you check the checkboxes in the right side of the table.
+After opening a file, the main window will be shown. The table in the left side displays all the hdf5 files that are in same dir as the one that you've opened. You can use the table to sort the files by name, used motors, number of points and date. You can also open the other files if you check the checkboxes in the right side of the table.
 
-![Plot window.](images/table.png "Table")
+![Table](images/table.png "Table")
 
-To open several files at once, you can either select them in the file dialog or select all the files you want and press enter in the table. For instance, you could press Ctrl+a (select all) and then press ENTER to open all files in the current Dir, to close all, press ESC instead.
+To open several files at once, you can either select them in the file dialog or select all the files you want and press enter in the table. For instance, you could press Ctrl+a (select all) and then press ENTER to open all files in the current dir, to close all, press ESC instead.
 
-![Select several files.](images/open_multi_files.png "Select several files")
+![Select several files.](images/open_multi_file.png "Select several files")
 
 The GUI will work in tab mode if you go to File > Open and open another file:
 
-![Select several files.](new_tab.png "Select several files")
+![New tab.](images/new_tab.png "New tab.")
 
 Select a displayed curve to get statistics from it:
 

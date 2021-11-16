@@ -5,11 +5,12 @@ import subprocess
 import json
 from pydm.widgets import PyDMEmbeddedDisplay
 from PyQt5 import QtWidgets, QtCore
-from qtpy.QtWidgets import (QVBoxLayout, QHBoxLayout, QGroupBox,
+from PyQt5.QtWidgets import (QVBoxLayout, QHBoxLayout, QGroupBox,
     QLabel, QLineEdit, QPushButton, QScrollArea, QFrame,
-    QApplication, QWidget)
+    QApplication, QWidget, QAction)
 from PyQt5.QtWidgets import QMenu
 from qdialog import FileDialog
+import qdarkstyle
 
 class MyDisplay(Display):
 
@@ -27,38 +28,69 @@ class MyDisplay(Display):
         """Connect keys to methods"""
         if event.key() == QtCore.Qt.Key_Delete:
             self.delete_tab()
+        if event.key() == QtCore.Qt.Key_F11:
+            if self.app.main_window.isFullScreen():
+                self.app.main_window.showNormal()
+            else:
+                self.app.main_window.showFullScreen()
+            
 
     def _createMenuBar(self):
         """Create the menu bar and shortcuts"""
-        menuBar = self.app.main_window.menuBar()
-        menuBar.clear()
+        menu_bar = self.app.main_window.menuBar()
+        menu_bar.clear()
         # Creating menus using a QMenu object
-        self.fileMenu = QMenu("&File", self)
-        menuBar.addMenu(self.fileMenu)
-        openaction = self.fileMenu.addAction('&Open File')
-        openaction.setShortcut("Ctrl+o")
-        editMenu = menuBar.addMenu("&Edit")
-        helpMenu = menuBar.addMenu("&Help")
+        self.file_menu = QMenu("&File", self)
+        self.option_menu = QMenu("&Options", self)
+
+        menu_bar.addMenu(self.file_menu)
+        open_action = self.file_menu.addAction('&Open File')
+        open_action.setShortcut("Ctrl+o")
+
+        menu_bar.addMenu(self.option_menu)
+        act = QAction('Dark Theme', self.option_menu, checkable=True)
+        style_action = self.option_menu.addAction(act)
+        for action in self.option_menu.actions():
+            if action.text() == 'Dark Theme':
+                action.setChecked(True)
+        # style_action.setShortcut("Ctrl+k")
+        
 
     def initializa_setup(self):
         """Initialiaze all needed things"""
         self.app = QApplication.instance()
-        self.app.main_window.showNormal()
+        # self.app.setWindowState().showNormal()
         self.app.main_window.setWindowTitle('SOL-View')
+        self.main_tab = True
+        self.tab_now = None
         self._createMenuBar()
         self.tab_dict = {}
         self.make_connections()
+        style = qdarkstyle.load_stylesheet_pyqt5()
+        self.app.setStyleSheet(style)
+
 
     def make_connections(self):
         """Connect methods"""
         self.tabWidget.tabCloseRequested.connect(self.delete_tab)
-        self.fileMenu.triggered.connect(self.display_hdf5_files)
+        self.file_menu.triggered.connect(self.display_hdf5_files)
+        self.option_menu.triggered.connect(self.style_sheet_handler)
+        self.pushButton.clicked.connect(self.display_hdf5_files)
+
+    def style_sheet_handler(self):
+        for action in self.option_menu.actions():
+            if action.text() == 'Dark Theme':
+                if action.isChecked():
+                    style = qdarkstyle.load_stylesheet_pyqt5()
+                    self.app.setStyleSheet(style)
+                else:
+                    self.app.setStyleSheet('')
 
     def display_hdf5_files(self):
         """Open the file browser modified to accept more than 1 file selected"""
         options = FileDialog.Options()
         options |= FileDialog.DontUseNativeDialog
-        files, _ = FileDialog.getOpenFileNames(self,"QFileDialog.getOpenFileNames()", "","HDF5 files (*.hdf5);;All Files (*)", options=options)
+        files, _ = FileDialog.getOpenFileNames(self,"Select one or more files", "","HDF5 files (*.hdf5);;All Files (*)", options=options)
         self.show()
         if files:
             self.files_now = files
@@ -68,24 +100,39 @@ class MyDisplay(Display):
         if self.files_now:
             self.plot_tab(self.files_now)
 
+    def tab_name_handler(self):
+        if self.main_tab:
+            self.tabWidget.removeTab(self.tabWidget.currentIndex())
+            self.main_tab = False
+        if self.tab_now is not None:
+            a = self.tab_now
+            self.tab_now = None
+            return a
+
+        tab_index = self.tabWidget.count() + 1
+        tab_name = 'Plot ' + str(tab_index).zfill(3)
+        return tab_name
+
+
+
     def plot_tab(self, items):
         """Manage all plot tab and load an embedded display for it chunk of files selected in browser file menu"""
-        tab_name = ''
-        for item in items:
-            head, tail = os.path.split(item)
-            tab_name += tail + ' - '
-            path_file = head
-        tab_name = tab_name[:-3]
+        
+        tab_name = self.tab_name_handler()
+        
         self.tab_dict[tab_name] = {'widget' : QtWidgets.QWidget()}
         index = self.tabWidget.addTab(self.tab_dict[tab_name]['widget'], tab_name)
         self.tab_dict[tab_name]['layout'] = QHBoxLayout()
         self.tab_dict[tab_name]['widget'].setLayout(self.tab_dict[tab_name]['layout'])
         self.tab_dict[tab_name]['display'] = PyDMEmbeddedDisplay(parent=self)
-        self.tab_dict[tab_name]['display'].macros = json.dumps({"FILE":tab_name, "PATH" : path_file + '/'})
+        self.tab_dict[tab_name]['display'].macros = json.dumps({"FILES": self.files_now})
         self.tab_dict[tab_name]['display'].filename = path.join(path.dirname(path.realpath(__file__)), 'plot_hdf5.py')
         self.tab_dict[tab_name]['layout'].addWidget(self.tab_dict[tab_name]['display'])
         self.tabWidget.setCurrentIndex(index)
 
     def delete_tab(self):
         """Delte a tab from the tabWidget"""
+        self.tab_now = self.tabWidget.tabText(self.tabWidget.currentIndex())
         self.tabWidget.removeTab(self.tabWidget.currentIndex())
+
+

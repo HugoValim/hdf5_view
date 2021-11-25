@@ -151,7 +151,10 @@ class MyDisplay(Display):
                             if 'shape' in attrs:
                                 if len(instrument[i].attrs['shape'].split(',')) >= 2:
                                     continue
-                        self.motors_data[i + '__data__' + tail] = instrument[i]['data'][:]
+                        try:
+                            self.motors_data[i + '__data__' + tail] = instrument[i]['data'][:]
+                        except:
+                            pass
                     else:
                         self.counters_data[i + '__data__' + tail] = instrument[i][i][:]
 
@@ -168,20 +171,23 @@ class MyDisplay(Display):
         self.dir_files.sort()  
         for file in self.dir_files:
             date = self.modification_date(os.path.join(self.path,file))
-            with silx.io.open(os.path.join(self.path,file)) as sf:
-                instrument = sf['Scan/scan_000/instrument']
-                motors = ''
-                len_points = 0
-                for i in instrument:
-                    # If the data is called 'data' them its a motor, otherwise its a counter
-                    if 'data' in instrument[i]:
-                        attrs = [j for j in instrument[i].attrs]
-                        if 'shape' in attrs:
-                            if len(instrument[i].attrs['shape'].split(',')) >= 2:
-                                continue
-                        motors += i + ', '
-                        len_points = str(len(instrument[i]['data']))
-                motors = motors[:-2]
+            try:
+                with silx.io.open(os.path.join(self.path,file)) as sf:
+                    instrument = sf['Scan/scan_000/instrument']
+                    motors = ''
+                    len_points = 0
+                    for i in instrument:
+                        # If the data is called 'data' them its a motor, otherwise its a counter
+                        if 'data' in instrument[i]:
+                            attrs = [j for j in instrument[i].attrs]
+                            if 'shape' in attrs:
+                                if len(instrument[i].attrs['shape'].split(',')) >= 2:
+                                    continue
+                            motors += i + ', '
+                            len_points = str(len(instrument[i]['data']))
+                    motors = motors[:-2]
+            except:
+                continue
             self.tableWidget.insertRow(row)
             self.tableWidget.setItem(row, 0, QTableWidgetItem(file))
             self.tableWidget.setItem(row, 1, QTableWidgetItem(motors))

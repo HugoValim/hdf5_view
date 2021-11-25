@@ -14,6 +14,7 @@ from PyQt5.QtCore import QObject, QThread, pyqtSignal, QCoreApplication, QTimer
 from PyQt5 import QtCore
 import fits
 import plot_actions
+import hashlib
 
 class MyDisplay(Display):
 
@@ -22,6 +23,7 @@ class MyDisplay(Display):
         self.app = QApplication.instance()
         self.macros = macros
         self.initializa_setup()
+        self.hash = ''
 
     def ui_filename(self):
         return 'plot_hdf5.ui'
@@ -32,8 +34,8 @@ class MyDisplay(Display):
     def loop(self):
         """Loop to check if a curve is selected or not"""
         self.timer = QTimer()
-        self.timer.timeout.connect(self.custom_signals)
-        self.timer.start(1000) #trigger every .25 seconds.
+        self.timer.timeout.connect(self.on_dir_change_update)
+        self.timer.start(1000) #trigger every 1 seconds.
 
     def keyPressEvent(self, event):
         """Connect keys to methods"""
@@ -47,15 +49,50 @@ class MyDisplay(Display):
             else:
                 self.app.main_window.showFullScreen()
 
-    def custom_signals(self):
-        """If there is an active curve, do the stats for that"""
+    def on_dir_change_update(self):
+        """Update the dir if there is a new file"""
 
         # self.legend_widget.updateLegends()
-        dir_files = os.listdir(self.path)
-        dir_files = [i for i in dir_files if i.endswith('.hdf5')]
-        dir_files.sort() 
-        if dir_files != self.dir_files:
-            self.clear_table_files()           
+        #dir_files = os.listdir(self.path)
+        #dir_files = [i for i in dir_files if i.endswith('.hdf5')]
+        #dir_files.sort() 
+        #if dir_files != self.dir_files:
+        #    self.clear_table_files()
+        hash_now = self.get_dir_md5(self.path)
+        if self.hash != hash_now:
+            self.hash = hash_now
+            self.clear_table_files()
+
+    def get_dir_md5(self, dir_root):
+        """Build a tar file of the directory and return its md5 sum"""
+
+        hash = hashlib.md5()
+        for dirpath, dirnames, filenames in os.walk(dir_root, topdown=True):
+
+            dirnames.sort(key=os.path.normcase)
+            filenames.sort(key=os.path.normcase)
+
+            for filename in filenames:
+                filepath = os.path.join(dirpath, filename)
+
+                # If some metadata is required, add it to the checksum
+
+                # 1) filename (good idea)
+                #hash.update(os.path.normcase(os.path.relpath(filepath, dir_root)))
+
+                # 2) mtime (possibly a bad idea)
+                
+                # hash.update(struct.pack('d', st.st_mtime))
+
+                # 3) size (good idea perhaps)
+                st = os.stat(filepath)
+                hash.update(bytes(st.st_size))
+
+                f = open(filepath, 'rb')
+                for chunk in iter(lambda: f.read(65536), b''):
+                    hash.update(chunk)
+
+        return hash.hexdigest()          
 
     def initializa_setup(self):
         """Initialize all setup variables"""

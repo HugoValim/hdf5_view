@@ -1,6 +1,8 @@
 from collections import Counter
 import os
 from os import path
+from os import listdir
+from os.path import isfile, join
 import time
 import datetime
 import numpy as np
@@ -35,7 +37,7 @@ class MyDisplay(Display):
         """Loop to check if a curve is selected or not"""
         self.timer = QTimer()
         self.timer.timeout.connect(self.on_dir_change_update)
-        self.timer.start(1000) #trigger every 1 seconds.
+        self.timer.start(5000) #trigger every 1 seconds.
 
     def keyPressEvent(self, event):
         """Connect keys to methods"""
@@ -50,49 +52,20 @@ class MyDisplay(Display):
                 self.app.main_window.showFullScreen()
 
     def on_dir_change_update(self):
-        """Update the dir if there is a new file"""
-
-        # self.legend_widget.updateLegends()
-        #dir_files = os.listdir(self.path)
-        #dir_files = [i for i in dir_files if i.endswith('.hdf5')]
-        #dir_files.sort() 
-        #if dir_files != self.dir_files:
-        #    self.clear_table_files()
-        hash_now = self.get_dir_md5(self.path)
-        if self.hash != hash_now:
-            self.hash = hash_now
-            self.clear_table_files()
-
-    def get_dir_md5(self, dir_root):
-        """Build a tar file of the directory and return its md5 sum"""
-
-        hash = hashlib.md5()
-        for dirpath, dirnames, filenames in os.walk(dir_root, topdown=True):
-
-            dirnames.sort(key=os.path.normcase)
-            filenames.sort(key=os.path.normcase)
-
-            for filename in filenames:
-                filepath = os.path.join(dirpath, filename)
-
-                # If some metadata is required, add it to the checksum
-
-                # 1) filename (good idea)
-                #hash.update(os.path.normcase(os.path.relpath(filepath, dir_root)))
-
-                # 2) mtime (possibly a bad idea)
-                
-                # hash.update(struct.pack('d', st.st_mtime))
-
-                # 3) size (good idea perhaps)
-                st = os.stat(filepath)
-                hash.update(bytes(st.st_size))
-
-                f = open(filepath, 'rb')
-                for chunk in iter(lambda: f.read(65536), b''):
-                    hash.update(chunk)
-
-        return hash.hexdigest()          
+        # current_files = [f for f in listdir(self.path) if isfile(join(self.path, f))]
+        # current_files = [i for i in current_files if i.endswith('.hdf5')]
+        # difference = []
+        # for i in self.dir_files:
+        #     if i not in current_files:
+        #         difference.append(i)
+        # for i in current_files:
+        #     if i not in self.dir_files:
+        #         difference.append(i)
+        # print(difference)
+        # if difference:
+        #     print('here')
+        #     self.clear_table_files()
+        self.clear_table_files()
 
     def initializa_setup(self):
         """Initialize all setup variables"""
@@ -203,9 +176,9 @@ class MyDisplay(Display):
     def table_files(self):
         row = 0
         self.table_checkboxes = {}
-        self.dir_files = os.listdir(self.path)
+        self.dir_files = [f for f in listdir(self.path) if isfile(join(self.path, f))]
         self.dir_files = [i for i in self.dir_files if i.endswith('.hdf5')]
-        self.dir_files.sort()  
+        self.dir_files.sort() 
         for file in self.dir_files:
             date = self.modification_date(os.path.join(self.path,file))
             try:
@@ -230,14 +203,8 @@ class MyDisplay(Display):
             self.tableWidget.setItem(row, 1, QTableWidgetItem(motors))
             self.tableWidget.setItem(row, 2, QTableWidgetItem(len_points))
             self.tableWidget.setItem(row, 3, QTableWidgetItem(date))
-            widget   = QWidget(parent=self.tableWidget)
             self.table_checkboxes[file] = QCheckBox()
-            self.table_checkboxes[file].setCheckState(QtCore.Qt.Unchecked)
-            layoutH = QHBoxLayout(widget)
-            layoutH.addWidget(self.table_checkboxes[file])
-            layoutH.setAlignment(QtCore.Qt.AlignCenter)
-            layoutH.setContentsMargins(10, 0, 0, 0)           
-            self.tableWidget.setCellWidget(row, 4, widget)
+            self.table_checkboxes[file].setCheckState(QtCore.Qt.Unchecked)       
             full_file_path = self.path + '/' + file
             if full_file_path in self.files: 
                 self.table_checkboxes[file].setChecked(True)
@@ -502,6 +469,7 @@ class MyDisplay(Display):
     def clear_table_files(self):
         self.tableWidget.clearContents()
         self.tableWidget.setRowCount(0)
+        self.table_checkboxes = {}
         self.table_files()
 
     def clear_all(self):

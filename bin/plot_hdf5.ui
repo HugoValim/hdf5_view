@@ -102,7 +102,7 @@
              <enum>Qt::SolidLine</enum>
             </property>
             <property name="sortingEnabled">
-             <bool>true</bool>
+             <bool>false</bool>
             </property>
             <attribute name="verticalHeaderVisible">
              <bool>false</bool>
@@ -513,11 +513,6 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>Plot1D</class>
-   <extends>PlotWindow</extends>
-   <header>silx.gui.plot.PlotWindow</header>
-  </customwidget>
-  <customwidget>
    <class>PlotWidget</class>
    <extends>QMainWindow</extends>
    <header>silx.gui.plot.PlotWidget</header>
@@ -526,6 +521,12 @@
   <customwidget>
    <class>PlotWindow</class>
    <extends>PlotWidget</extends>
+   <header>silx.gui.plot.PlotWindow</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>Plot1D</class>
+   <extends>PlotWindow</extends>
    <header>silx.gui.plot.PlotWindow</header>
    <container>1</container>
   </customwidget>

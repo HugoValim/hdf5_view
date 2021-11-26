@@ -1,6 +1,8 @@
 from collections import Counter
 import os
 from os import path
+from os import listdir
+from os.path import isfile, join
 import time
 import datetime
 import numpy as np
@@ -14,6 +16,7 @@ from PyQt5.QtCore import QObject, QThread, pyqtSignal, QCoreApplication, QTimer
 from PyQt5 import QtCore
 import fits
 import plot_actions
+import hashlib
 
 class MyDisplay(Display):
 
@@ -22,6 +25,7 @@ class MyDisplay(Display):
         self.app = QApplication.instance()
         self.macros = macros
         self.initializa_setup()
+        self.hash = ''
 
     def ui_filename(self):
         return 'plot_hdf5.ui'
@@ -32,8 +36,8 @@ class MyDisplay(Display):
     def loop(self):
         """Loop to check if a curve is selected or not"""
         self.timer = QTimer()
-        self.timer.timeout.connect(self.custom_signals)
-        self.timer.start(1000) #trigger every .25 seconds.
+        self.timer.timeout.connect(self.on_dir_change_update)
+        self.timer.start(5000) #trigger every 1 seconds.
 
     def keyPressEvent(self, event):
         """Connect keys to methods"""
@@ -47,15 +51,21 @@ class MyDisplay(Display):
             else:
                 self.app.main_window.showFullScreen()
 
-    def custom_signals(self):
-        """If there is an active curve, do the stats for that"""
-
-        # self.legend_widget.updateLegends()
-        dir_files = os.listdir(self.path)
-        dir_files = [i for i in dir_files if i.endswith('.hdf5')]
-        dir_files.sort() 
-        if dir_files != self.dir_files:
-            self.clear_table_files()           
+    def on_dir_change_update(self):
+        # current_files = [f for f in listdir(self.path) if isfile(join(self.path, f))]
+        # current_files = [i for i in current_files if i.endswith('.hdf5')]
+        # difference = []
+        # for i in self.dir_files:
+        #     if i not in current_files:
+        #         difference.append(i)
+        # for i in current_files:
+        #     if i not in self.dir_files:
+        #         difference.append(i)
+        # print(difference)
+        # if difference:
+        #     print('here')
+        #     self.clear_table_files()
+        self.clear_table_files()
 
     def initializa_setup(self):
         """Initialize all setup variables"""
@@ -151,7 +161,10 @@ class MyDisplay(Display):
                             if 'shape' in attrs:
                                 if len(instrument[i].attrs['shape'].split(',')) >= 2:
                                     continue
-                        self.motors_data[i + '__data__' + tail] = instrument[i]['data'][:]
+                        try:
+                            self.motors_data[i + '__data__' + tail] = instrument[i]['data'][:]
+                        except:
+                            pass
                     else:
                         self.counters_data[i + '__data__' + tail] = instrument[i][i][:]
 
@@ -163,38 +176,35 @@ class MyDisplay(Display):
     def table_files(self):
         row = 0
         self.table_checkboxes = {}
-        self.dir_files = os.listdir(self.path)
+        self.dir_files = [f for f in listdir(self.path) if isfile(join(self.path, f))]
         self.dir_files = [i for i in self.dir_files if i.endswith('.hdf5')]
-        self.dir_files.sort()  
+        self.dir_files.sort() 
         for file in self.dir_files:
             date = self.modification_date(os.path.join(self.path,file))
-            with silx.io.open(os.path.join(self.path,file)) as sf:
-                instrument = sf['Scan/scan_000/instrument']
-                motors = ''
-                len_points = 0
-                for i in instrument:
-                    # If the data is called 'data' them its a motor, otherwise its a counter
-                    if 'data' in instrument[i]:
-                        attrs = [j for j in instrument[i].attrs]
-                        if 'shape' in attrs:
-                            if len(instrument[i].attrs['shape'].split(',')) >= 2:
-                                continue
-                        motors += i + ', '
-                        len_points = str(len(instrument[i]['data']))
-                motors = motors[:-2]
+            try:
+                with silx.io.open(os.path.join(self.path,file)) as sf:
+                    instrument = sf['Scan/scan_000/instrument']
+                    motors = ''
+                    len_points = 0
+                    for i in instrument:
+                        # If the data is called 'data' them its a motor, otherwise its a counter
+                        if 'data' in instrument[i]:
+                            attrs = [j for j in instrument[i].attrs]
+                            if 'shape' in attrs:
+                                if len(instrument[i].attrs['shape'].split(',')) >= 2:
+                                    continue
+                            motors += i + ', '
+                            len_points = str(len(instrument[i]['data']))
+                    motors = motors[:-2]
+            except:
+                continue
             self.tableWidget.insertRow(row)
             self.tableWidget.setItem(row, 0, QTableWidgetItem(file))
             self.tableWidget.setItem(row, 1, QTableWidgetItem(motors))
             self.tableWidget.setItem(row, 2, QTableWidgetItem(len_points))
             self.tableWidget.setItem(row, 3, QTableWidgetItem(date))
-            widget   = QWidget(parent=self.tableWidget)
             self.table_checkboxes[file] = QCheckBox()
-            self.table_checkboxes[file].setCheckState(QtCore.Qt.Unchecked)
-            layoutH = QHBoxLayout(widget)
-            layoutH.addWidget(self.table_checkboxes[file])
-            layoutH.setAlignment(QtCore.Qt.AlignCenter)
-            layoutH.setContentsMargins(10, 0, 0, 0)           
-            self.tableWidget.setCellWidget(row, 4, widget)
+            self.table_checkboxes[file].setCheckState(QtCore.Qt.Unchecked)       
             full_file_path = self.path + '/' + file
             if full_file_path in self.files: 
                 self.table_checkboxes[file].setChecked(True)
@@ -459,6 +469,7 @@ class MyDisplay(Display):
     def clear_table_files(self):
         self.tableWidget.clearContents()
         self.tableWidget.setRowCount(0)
+        self.table_checkboxes = {}
         self.table_files()
 
     def clear_all(self):

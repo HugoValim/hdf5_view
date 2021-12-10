@@ -7,7 +7,8 @@ import time
 import datetime
 import numpy as np
 from pydm import Display
-from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt
+from PyQt5 import QtWidgets,QtGui
 from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem, QHeaderView, QWidget, QCheckBox, QHBoxLayout, QSplitter, QApplication
 import silx.io
 from silx.gui import qt
@@ -52,19 +53,6 @@ class MyDisplay(Display):
                 self.app.main_window.showFullScreen()
 
     def on_dir_change_update(self):
-        # current_files = [f for f in listdir(self.path) if isfile(join(self.path, f))]
-        # current_files = [i for i in current_files if i.endswith('.hdf5')]
-        # difference = []
-        # for i in self.dir_files:
-        #     if i not in current_files:
-        #         difference.append(i)
-        # for i in current_files:
-        #     if i not in self.dir_files:
-        #         difference.append(i)
-        # print(difference)
-        # if difference:
-        #     print('here')
-        #     self.clear_table_files()
         self.clear_table_files()
 
     def initializa_setup(self):
@@ -78,6 +66,7 @@ class MyDisplay(Display):
         self.store_current_counters = []
         self.store_current_motors= []
         self.store_current_monitors = []
+        self.store_highlighted = []
         self.files = self.macros['FILES']
         head, tail = os.path.split(self.files[0])
         self.path = head
@@ -87,8 +76,14 @@ class MyDisplay(Display):
         self.new_buttons()
         self.build_splitable_layout()
         self.build_plot()
+        self.connections()
 
-      
+    def connections(self):
+        """Do the connections"""
+        self.plot.sigPlotSignal.connect(self.plot_signal_handler)
+        self.plot.sigActiveCurveChanged.connect(self.update_stat)
+        self.tableWidget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tableWidget.customContextMenuRequested[QtCore.QPoint].connect(self.table_menu)
 
     def build_splitable_layout(self):
         splitter_frames = QSplitter(QtCore.Qt.Horizontal)
@@ -133,7 +128,6 @@ class MyDisplay(Display):
         self.set_standard_plot(self.store_current_counters, self.store_current_motors, self.store_current_monitors)
         self.uncheck_other_motors()
         self.uncheck_other_monitors()
-        self.connections()
         self.loop()
 
     def __legend_widget(self):
@@ -173,6 +167,33 @@ class MyDisplay(Display):
         mt = str(datetime.datetime.fromtimestamp(t))[:-7]
         return mt
 
+    def table_menu(self):
+        self.table_menu = QtGui.QMenu(self.tableWidget)        
+        open_action = self.table_menu.addAction('Highlight')
+        open_action.triggered.connect(self.highlight_table)
+        self.table_menu.exec_(QtGui.QCursor.pos())
+
+    def highlight_table(self, items=None):
+        flag_signal = False
+        if not items:
+            items = self.tableWidget.selectedItems()
+            flag_signal = True
+        for item in items:
+            for j in range(self.tableWidget.columnCount() - 1):
+                if j == 0:
+                    file = self.tableWidget.item(item.row(), j).text()
+                    if flag_signal:
+                        if file in self.store_highlighted:
+                            self.store_highlighted.remove(file)
+                            self.clear_table_files()
+                            break
+                        else:
+                            self.store_highlighted.append(file)                            
+                self.tableWidget.item(item.row(), j).setBackground(QtGui.QColor(0,125,0))
+            if file in self.store_highlighted:
+                self.table_checkboxes[file].setStyleSheet("background-color : rgb(0,125,0);")
+            break
+
     def table_files(self):
         row = 0
         self.table_checkboxes = {}
@@ -204,12 +225,15 @@ class MyDisplay(Display):
             self.tableWidget.setItem(row, 2, QTableWidgetItem(len_points))
             self.tableWidget.setItem(row, 3, QTableWidgetItem(date))
             self.table_checkboxes[file] = QCheckBox()
-            self.table_checkboxes[file].setCheckState(QtCore.Qt.Unchecked)       
+            self.table_checkboxes[file].setCheckState(QtCore.Qt.Unchecked) 
+            self.tableWidget.setCellWidget(row, 4, self.table_checkboxes[file])
             full_file_path = self.path + '/' + file
             if full_file_path in self.files: 
                 self.table_checkboxes[file].setChecked(True)
             self.table_checkboxes[file].stateChanged.connect(self.on_state_changed)
-            self.tableWidget.setCellWidget(row, 4, self.table_checkboxes[file])
+            #Keep the hightlighted ones
+            if file in self.store_highlighted:
+                self.highlight_table(items = [self.tableWidget.item(row, 0)])
             row += 1
 
         header = self.tableWidget.horizontalHeader()
@@ -260,24 +284,6 @@ class MyDisplay(Display):
         for key in motor_count.keys():
             if motor_count[key] != len(self.files):
                 flag_diff = True
-        # for key in counters_count.keys():
-        #     if counters_count[key] != len(self.files):
-        #         flag_diff = True
-        # if flag_diff:
-        #        msg = QMessageBox()
-        #        msg.setIcon(QMessageBox.Information)
-        #        msg.setText("There is a difference between counters/motors in the selected files")
-        #        msg.setInformativeText("Some counters and/or motors are not present in all the files")
-        #        msg.setWindowTitle("Warning")
-        #        # msg.setDetailedText("The details are as follows:")
-        #        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-        #        # msg.buttonClicked.connect(msgbtn)
-        #        retval = msg.exec_()
-
-    def connections(self):
-        """Do the connections"""
-        self.plot.sigPlotSignal.connect(self.plot_signal_handler)
-        self.plot.sigActiveCurveChanged.connect(self.update_stat)
 
     def plot_signal_handler(self, dict_):
         # if dict_['event'] == 'curveClicked':
@@ -309,6 +315,7 @@ class MyDisplay(Display):
             self.tableWidget_plot.setCellWidget(row, 1, self.dict_counters[i])
             self.dict_counters[i].setText(i)
             row += 1
+
     def motor_checkboxes(self):
         """Create motor checkboxes in ther tab interface"""
         self.dict_motors = {}

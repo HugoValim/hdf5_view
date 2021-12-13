@@ -38,7 +38,7 @@ class MyDisplay(Display):
         """Loop to check if a curve is selected or not"""
         self.timer = QTimer()
         self.timer.timeout.connect(self.on_dir_change_update)
-        self.timer.start(5000) #trigger every 1 seconds.
+        self.timer.start(10000) #trigger every 1 seconds.
 
     def keyPressEvent(self, event):
         """Connect keys to methods"""
@@ -168,15 +168,26 @@ class MyDisplay(Display):
         return mt
 
     def table_menu(self):
-        self.table_menu = QtGui.QMenu(self.tableWidget)        
-        open_action = self.table_menu.addAction('Highlight')
-        open_action.triggered.connect(self.highlight_table)
+        self.table_menu = QtGui.QMenu(self.tableWidget)
+        # Close the file
+        open_action = self.table_menu.addAction('Open File')
+        open_action.triggered.connect(self.check_selected_checkboxes)
+        # Open the file
+        close_action = self.table_menu.addAction('Close File')
+        close_action.triggered.connect(self.uncheck_selected_checkboxes)        
+        # Highlight a table row        
+        highlight_action = self.table_menu.addAction('Highlight')
+        highlight_action.triggered.connect(self.highlight_table)
+
         self.table_menu.exec_(QtGui.QCursor.pos())
 
     def highlight_table(self, items=None):
+        rm_signal = False
         flag_signal = False
         if not items:
             items = self.tableWidget.selectedItems()
+            slice_ = self.tableWidget.columnCount() - 1
+            items = items[::slice_]
             flag_signal = True
         for item in items:
             for j in range(self.tableWidget.columnCount() - 1):
@@ -185,14 +196,16 @@ class MyDisplay(Display):
                     if flag_signal:
                         if file in self.store_highlighted:
                             self.store_highlighted.remove(file)
-                            self.clear_table_files()
+                            rm_signal = True
                             break
                         else:
-                            self.store_highlighted.append(file)                            
-                self.tableWidget.item(item.row(), j).setBackground(QtGui.QColor(0,125,0))
+                            self.store_highlighted.append(file)
+                if file in self.store_highlighted:                            
+                    self.tableWidget.item(item.row(), j).setBackground(QtGui.QColor(0,125,0))
             if file in self.store_highlighted:
                 self.table_checkboxes[file].setStyleSheet("background-color : rgb(0,125,0);")
-            break
+        if rm_signal:
+            self.clear_table_files()
 
     def table_files(self):
         row = 0

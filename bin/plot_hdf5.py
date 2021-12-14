@@ -18,6 +18,9 @@ from PyQt5 import QtCore
 import fits
 import plot_actions
 import hashlib
+from silx.gui.plot import Plot1D
+from PyMca5.PyMcaGui.pymca.ScanWindow import ScanWindow
+from PyMca5.PyMcaGui.plotting.PlotWindow import PlotWindow
 
 class MyDisplay(Display):
 
@@ -57,7 +60,8 @@ class MyDisplay(Display):
 
     def initializa_setup(self):
         """Initialize all setup variables"""
-        self.plot = self.ui.plotwindow
+        self.plot = ScanWindow()
+        self.verticalLayout.addWidget(self.plot)
         self.plot.setMinimumHeight(300)
         self.plot.setMinimumWidth(400)
         self.curve_now = None
@@ -70,7 +74,7 @@ class MyDisplay(Display):
         self.files = self.macros['FILES']
         head, tail = os.path.split(self.files[0])
         self.path = head
-        self.__legend_widget()
+        # self.__legend_widget()
         self.table_files()
         self.table_stats_layout()
         self.new_buttons()
@@ -81,7 +85,7 @@ class MyDisplay(Display):
     def connections(self):
         """Do the connections"""
         self.plot.sigPlotSignal.connect(self.plot_signal_handler)
-        self.plot.sigActiveCurveChanged.connect(self.update_stat)
+        # self.plot.sigActiveCurveChanged.connect(self.update_stat)
         self.tableWidget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tableWidget.customContextMenuRequested[QtCore.QPoint].connect(self.table_menu)
 
@@ -99,7 +103,7 @@ class MyDisplay(Display):
         splitter_tables = QSplitter(QtCore.Qt.Vertical)
         splitter_tables.addWidget(self.tableWidget)
         splitter_tables.addWidget(self.tableWidget_plot)
-        splitter_tables.addWidget(self.legend_widget)
+        # splitter_tables.addWidget(self.legend_widget)
         splitter_tables.setCollapsible(0,False)
         splitter_tables.setCollapsible(1,False)
         splitter_tables.setCollapsible(2,False)
@@ -299,13 +303,11 @@ class MyDisplay(Display):
                 flag_diff = True
 
     def plot_signal_handler(self, dict_):
-        # if dict_['event'] == 'curveClicked':
-        #     print(dict_['label'])
-        #     print(self.plot.getActiveCurve())
-        #     if self.plot.getActiveCurve() is not None:
-        #         self.update_stat()
-        # print(dict_)
-        pass
+        if dict_['event'] == 'curveClicked':
+            if self.plot.getActiveCurve() is not None:
+                self.update_stat()
+
+        
 
     def build_plot_table(self):
         row_size = max([len(self.simplified_counter_data), len(self.simplified_motor_data)])
@@ -409,17 +411,22 @@ class MyDisplay(Display):
                     else:
                         data = self.counters_data[i + '__data__' + tail]
                     if self.checked_now:
-                        self.plot.getXAxis().setLabel(self.checked_now)
-                        self.plot.addCurve(self.motors_data[self.checked_now + '__data__' + tail], data, legend = i + '__data__' + tail)
+                        # self.plot.getXAxis().setLabel(self.checked_now)
+                        if self.dict_counters[i].isChecked():
+                            self.plot.addCurve(self.motors_data[self.checked_now + '__data__' + tail], data, legend = i + '__data__' + tail, replot=False, replace=False)
                     else:
-                        self.plot.getXAxis().setLabel("Points")
+                        # self.plot.getXAxis().setLabel("Points")
                         points = [i for i in range(len(data))]
-                        self.plot.addCurve(points, data, legend = i + '__data__' + tail)
+                        if self.dict_counters[i].isChecked():
+                            self.plot.addCurve(points, data, legend = i + '__data__' + tail, replot=False, replace=False)
                 
                     if self.dict_counters[i].isChecked():
                         self.plot.getCurve(i + '__data__' + tail)
                     else:
-                        self.plot.remove(i + '__data__' + tail)
+                        self.plot.removeCurve(i + '__data__' + tail + ' Y')
+                        if i + '__data__' + tail in self.plot.dataObjectsDict:
+                            del self.plot.dataObjectsDict[i + '__data__' + tail]
+                        # print(self.plot._curveList)
 
         self.plot.resetZoom()
 
@@ -458,8 +465,7 @@ class MyDisplay(Display):
 
         if self.plot.getActiveCurve() is not None:
             activeCurve = self.plot.getActiveCurve()
-            x0 = activeCurve.getXData()
-            y0 = activeCurve.getYData()
+            x0, y0, legend, info = activeCurve[0:4]
             self.stats = fits.fitGauss(x0,y0)
             self.peak = self.stats[0]
             self.peak_pos = self.stats[1]

@@ -233,9 +233,6 @@
            <number>0</number>
           </property>
           <item>
-           <widget class="Plot1D" name="plotwindow"/>
-          </item>
-          <item>
            <widget class="QTableWidget" name="tableWidget_stats">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -514,26 +511,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>PlotWidget</class>
-   <extends>QMainWindow</extends>
-   <header>silx.gui.plot.PlotWidget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>PlotWindow</class>
-   <extends>PlotWidget</extends>
-   <header>silx.gui.plot.PlotWindow</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>Plot1D</class>
-   <extends>PlotWindow</extends>
-   <header>silx.gui.plot.PlotWindow</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

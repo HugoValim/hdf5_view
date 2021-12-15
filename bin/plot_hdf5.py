@@ -21,6 +21,7 @@ import hashlib
 from silx.gui.plot import Plot1D
 from PyMca5.PyMcaGui.pymca.ScanWindow import ScanWindow
 from PyMca5.PyMcaGui.plotting.PlotWindow import PlotWindow
+from PyMca5.PyMcaGui.plotting.LegendSelector import LegendListView
 
 class MyDisplay(Display):
 
@@ -60,10 +61,10 @@ class MyDisplay(Display):
 
     def initializa_setup(self):
         """Initialize all setup variables"""
-        self.plot = ScanWindow()
+        self.plot = ScanWindow(backend='silx')
         self.verticalLayout.addWidget(self.plot)
         self.plot.setMinimumHeight(300)
-        self.plot.setMinimumWidth(400)
+        self.plot.setMinimumWidth(600)
         self.curve_now = None
         self.checked_now = None
         self.monitor_checked_now = None
@@ -74,7 +75,7 @@ class MyDisplay(Display):
         self.files = self.macros['FILES']
         head, tail = os.path.split(self.files[0])
         self.path = head
-        # self.__legend_widget()
+        self.__plot_tools()
         self.table_files()
         self.table_stats_layout()
         self.new_buttons()
@@ -97,7 +98,7 @@ class MyDisplay(Display):
         splitter_frames.setCollapsible(1,False)
         splitter_frames.setStretchFactor(0, 1)
         splitter_frames.setStretchFactor(1, 1)
-        splitter_frames.setSizes([450, 200])
+        splitter_frames.setSizes([250, 400])
         self.horizontalLayout.addWidget(splitter_frames)
 
         splitter_tables = QSplitter(QtCore.Qt.Vertical)
@@ -113,7 +114,6 @@ class MyDisplay(Display):
         # splitter_frames.setSizes([450, 200])
         self.verticalLayout_left.addWidget(splitter_tables)
 
-
         splitter_plot_stat = QSplitter(QtCore.Qt.Vertical)
         splitter_plot_stat.addWidget(self.plot)
         splitter_plot_stat.addWidget(self.tableWidget_stats)
@@ -124,7 +124,6 @@ class MyDisplay(Display):
         splitter_plot_stat.setSizes([900, 100])
         self.verticalLayout.addWidget(splitter_plot_stat)
 
-
     def build_plot(self):
         self.get_hdf5_data()
         self.assert_data()
@@ -134,11 +133,10 @@ class MyDisplay(Display):
         self.uncheck_other_monitors()
         self.loop()
 
-    def __legend_widget(self):
-        self.legend_widget = LegendSelector.LegendsDockWidget(parent=self, plot = self.plot)
-        self.verticalLayout_left.addWidget(self.legend_widget)
-        # self.legend_widget.setMaximumWidth(500)
-        self.legend_widget.setMinimumHeight(100)
+    def __plot_tools(self):
+        self.plot._buildLegendWidget()
+        self.plot.toggleCrosshairCursor()
+        self.plot.legendWidget.setStyleSheet("color: rgb(0, 0, 0);")
 
     def get_hdf5_data(self):
         """Read Scan data and store into dicts, also creates a dict with simplified data names"""
@@ -306,9 +304,13 @@ class MyDisplay(Display):
         if dict_['event'] == 'curveClicked':
             if self.plot.getActiveCurve() is not None:
                 self.update_stat()
-
+        if str(self.app.style().metaObject().className()) == 'QFusionStyle':
+            self.plot._xPos.setStyleSheet("color: rgb(0, 0, 0);")
+            self.plot._yPos.setStyleSheet("color: rgb(0, 0, 0);")
+        elif str(self.app.style().metaObject().className()) == 'QStyleSheetStyle':
+            self.plot._xPos.setStyleSheet("color: rgb(255, 255, 255);")
+            self.plot._yPos.setStyleSheet("color: rgb(255, 255, 255);")
         
-
     def build_plot_table(self):
         row_size = max([len(self.simplified_counter_data), len(self.simplified_motor_data)])
         self.tableWidget_plot.setRowCount(row_size)
@@ -413,12 +415,12 @@ class MyDisplay(Display):
                     if self.checked_now:
                         # self.plot.getXAxis().setLabel(self.checked_now)
                         if self.dict_counters[i].isChecked():
-                            self.plot.addCurve(self.motors_data[self.checked_now + '__data__' + tail], data, legend = i + '__data__' + tail, replot=False, replace=False)
+                            self.plot.addCurve(self.motors_data[self.checked_now + '__data__' + tail], data, legend = i + '__data__' + tail)
                     else:
                         # self.plot.getXAxis().setLabel("Points")
                         points = [i for i in range(len(data))]
                         if self.dict_counters[i].isChecked():
-                            self.plot.addCurve(points, data, legend = i + '__data__' + tail, replot=False, replace=False)
+                            self.plot.addCurve(points, data, legend = i + '__data__' + tail)
                 
                     if self.dict_counters[i].isChecked():
                         self.plot.getCurve(i + '__data__' + tail)
@@ -429,6 +431,7 @@ class MyDisplay(Display):
                         # print(self.plot._curveList)
 
         self.plot.resetZoom()
+        self.plot.updateLegends()
 
     def new_buttons(self):
         """Method to add new buttons with new funcionalities to the plot"""

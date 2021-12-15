@@ -29,15 +29,16 @@ class Derivative(PlotAction):
         :param checked: Boolean parameter signaling whether the action
             has been checked or unchecked.
         """
-        allCurves = self.plot.getAllCurves(withhidden=True)
+        allCurves = self.plot.getAllCurves()
 
         # self.plot.clearCurves()
 
         for curve in allCurves:
-            x = curve.getXData()
-            y = curve.getYData()
-            legend = curve.getLegend()
-            info = curve.getInfo()
+            x, y, legend, info = curve[0:4]
+            # x = curve.getXData()
+            # y = curve.getYData()
+            # legend = curve.getLegend()
+            # info = curve.getInfo()
             if info is None:
                 info = {}
 
@@ -51,6 +52,6 @@ class Derivative(PlotAction):
 
             else:
                 if 'Derivative' in legend:
-                    self.plot.remove(legend)
+                    self.plot.removeCurve(legend + ' Y')
 
         self.plot.resetZoom()

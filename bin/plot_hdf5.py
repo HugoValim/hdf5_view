@@ -22,6 +22,7 @@ from silx.gui.plot import Plot1D
 from PyMca5.PyMcaGui.pymca.ScanWindow import ScanWindow
 from PyMca5.PyMcaGui.plotting.PlotWindow import PlotWindow
 from PyMca5.PyMcaGui.plotting.LegendSelector import LegendListView
+from PyQt5.QtWidgets import QMenu
 
 class MyDisplay(Display):
 
@@ -57,7 +58,9 @@ class MyDisplay(Display):
                 self.app.main_window.showFullScreen()
 
     def on_dir_change_update(self):
+        scroll_pos = self.tableWidget.verticalScrollBar().value()
         self.clear_table_files()
+        self.tableWidget.verticalScrollBar().setValue(scroll_pos)
 
     def initializa_setup(self):
         """Initialize all setup variables"""
@@ -170,7 +173,7 @@ class MyDisplay(Display):
         return mt
 
     def table_menu(self):
-        self.table_menu = QtGui.QMenu(self.tableWidget)
+        self.table_menu = QMenu(self.tableWidget)
         # Close the file
         open_action = self.table_menu.addAction('Open File')
         open_action.triggered.connect(self.check_selected_checkboxes)

@@ -418,7 +418,7 @@ class MyDisplay(Display):
                     if self.checked_now:
                         # self.plot.getXAxis().setLabel(self.checked_now)
                         if self.dict_counters[i].isChecked():
-                            self.plot.addCurve(self.motors_data[self.checked_now + '__data__' + tail], data, legend = i + '__data__' + tail)
+                            self.plot.addCurve(self.motors_data[self.checked_now + '__data__' + tail][:len(data)], data, legend = i + '__data__' + tail)
                     else:
                         # self.plot.getXAxis().setLabel("Points")
                         points = [i for i in range(len(data))]

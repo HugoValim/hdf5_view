@@ -2,7 +2,9 @@ from os import path
 from pydm import Display
 import os
 import subprocess
+
 import json
+from PyQt5.QtGui import QPixmap
 from pydm.widgets import PyDMEmbeddedDisplay
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import (QVBoxLayout, QHBoxLayout, QGroupBox,
@@ -61,6 +63,10 @@ class MyDisplay(Display):
         self.app = QApplication.instance()
         # self.app.setWindowState().showNormal()
         self.app.main_window.setWindowTitle('SOL-View')
+        pixmap_lnls = QPixmap(path.join(path.dirname(path.realpath(__file__)), "icons/lnls-sirius.png"))
+        pixmap_cnpem = QPixmap(path.join(path.dirname(path.realpath(__file__)), "icons/cnpem.png"))
+        self.label_img_1.setPixmap(pixmap_cnpem)
+        self.label_img_2.setPixmap(pixmap_lnls)
         self.main_tab = True
         self.tab_now = None
         self._createMenuBar()

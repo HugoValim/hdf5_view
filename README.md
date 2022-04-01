@@ -1,7 +1,14 @@
 # sol-view
 ## A GUI to facilitate the plot of data stored in hdf5 files
 
-To begin with, install all dependencies:
+To begin with, you will need to have python3-dev on your system:
+
+```
+sudo apt-get update
+sudo apt-get install python3-dev
+```
+
+Then, install all dependencies:
 
 ```
 pip install -r requirements.txt

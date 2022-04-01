@@ -43,7 +43,7 @@ class MyDisplay(Display):
         """Loop to check if a curve is selected or not"""
         self.timer = QTimer()
         self.timer.timeout.connect(self.on_dir_change_update)
-        self.timer.start(10000) #trigger every 1 seconds.
+        self.timer.start(10000) #trigger every 10 seconds.
 
     def keyPressEvent(self, event):
         """Connect keys to methods"""
@@ -447,6 +447,16 @@ class MyDisplay(Display):
         toolbar.addAction(action)
 
     def set_standard_plot(self,counters, motors, monitors):
+        """
+        Defines the standard plot. If you don't have any previous
+        configuration, it takes the first counter and motor, otherwise
+        it will take the ones that are current selected from previous
+        files.
+        """
+        if not counters:
+            counters.append(list(self.dict_counters.keys())[0])
+        if not motors:
+            motors.append(list(self.dict_motors.keys())[0])
         for counter in self.dict_counters.keys():
             if counter in counters:
                 self.dict_counters[counter].setChecked(True)

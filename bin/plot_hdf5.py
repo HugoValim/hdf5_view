@@ -163,9 +163,9 @@ class MyDisplay(Display):
         self.loop()
 
     def __plot_tools(self):
-        self.plot._buildLegendWidget()
+        # self.plot._buildLegendWidget() #Fix me im collapsed
         self.plot.toggleCrosshairCursor()
-        self.plot.legendWidget.setStyleSheet("color: rgb(0, 0, 0);")
+        # self.plot.legendWidget.setStyleSheet("color: rgb(0, 0, 0);")
 
     def get_hdf5_data(self):
         """Read Scan data and store into dicts, also creates a dict with simplified data names"""

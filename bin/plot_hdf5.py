@@ -5,7 +5,11 @@ from os import listdir
 from os.path import isfile, join
 import time
 import datetime
+
 import numpy as np
+import fits
+import pandas as pd
+
 from pydm import Display
 from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets,QtGui
@@ -15,14 +19,13 @@ from silx.gui import qt
 from silx.gui.plot import LegendSelector
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, QCoreApplication, QTimer
 from PyQt5 import QtCore
-import fits
-import plot_actions
-import hashlib
-from silx.gui.plot import Plot1D
 from PyMca5.PyMcaGui.pymca.ScanWindow import ScanWindow
 from PyMca5.PyMcaGui.plotting.PlotWindow import PlotWindow
 from PyMca5.PyMcaGui.plotting.LegendSelector import LegendListView
 from PyQt5.QtWidgets import QMenu
+from silx.gui.plot import Plot1D
+
+import plot_actions
 
 class MyDisplay(Display):
 
@@ -63,7 +66,7 @@ class MyDisplay(Display):
         self.tableWidget.verticalScrollBar().setValue(scroll_pos)
 
     def initializa_setup(self):
-        """Initialize all setup variables"""
+        """Initialize all setup variables and methods"""
         self.plot = ScanWindow(backend='silx')
         self.verticalLayout.addWidget(self.plot)
         self.plot.setMinimumHeight(300)
@@ -86,6 +89,28 @@ class MyDisplay(Display):
         self.build_plot()
         self.connections()
 
+    def table_menu(self):
+        """
+        Build the menu that is shown when a right cick is done in the
+        table widget containing the files
+
+        """
+        self.table_menu = QMenu(self.tableWidget)
+        # Close the file
+        open_action = self.table_menu.addAction('Open File')
+        open_action.triggered.connect(self.check_selected_checkboxes)
+        # Open the file
+        close_action = self.table_menu.addAction('Close File')
+        close_action.triggered.connect(self.uncheck_selected_checkboxes)        
+        # Highlight a table row        
+        highlight_action = self.table_menu.addAction('Highlight')
+        highlight_action.triggered.connect(self.highlight_table)
+        # Export hdf content to csv
+        highlight_action = self.table_menu.addAction('Export as csv')
+        highlight_action.triggered.connect(self.export_2_csv)
+
+        self.table_menu.exec_(QtGui.QCursor.pos())
+
     def connections(self):
         """Do the connections"""
         self.plot.sigPlotSignal.connect(self.plot_signal_handler)
@@ -94,6 +119,7 @@ class MyDisplay(Display):
         self.tableWidget.customContextMenuRequested[QtCore.QPoint].connect(self.table_menu)
 
     def build_splitable_layout(self):
+        """Build split bars"""
         splitter_frames = QSplitter(QtCore.Qt.Horizontal)
         splitter_frames.addWidget(self.frame_left)
         splitter_frames.addWidget(self.frame_right)
@@ -110,10 +136,10 @@ class MyDisplay(Display):
         # splitter_tables.addWidget(self.legend_widget)
         splitter_tables.setCollapsible(0,False)
         splitter_tables.setCollapsible(1,False)
-        splitter_tables.setCollapsible(2,False)
+        # splitter_tables.setCollapsible(2,False)
         splitter_tables.setStretchFactor(0, 1)
         splitter_tables.setStretchFactor(1, 1)
-        splitter_tables.setStretchFactor(2, 1)
+        # splitter_tables.setStretchFactor(2, 1)
         # splitter_frames.setSizes([450, 200])
         self.verticalLayout_left.addWidget(splitter_tables)
 
@@ -167,24 +193,39 @@ class MyDisplay(Display):
                     else:
                         self.counters_data[i + '__data__' + tail] = instrument[i][i][:]
 
+
+    def get_hdf5_data_2_export(self, file):
+        """Read Scan data and store into dicts, also creates a dict with simplified data names"""
+        export_counters_data = {}
+        export_motors_data = {}
+
+        fo = open(file)
+        fo.close()
+        with silx.io.open(file) as sf:
+            data = sf
+            head, tail = os.path.split(file)
+            instrument = sf['Scan/scan_000/instrument']
+            for i in instrument:
+                # If the data is called 'data' them its a motor, otherwise its a counter
+                if 'data' in instrument[i]:
+                    if 'data' in instrument[i]:
+                        attrs = [j for j in instrument[i].attrs]
+                        if 'shape' in attrs:
+                            if len(instrument[i].attrs['shape'].split(',')) >= 2:
+                                continue
+                    try:
+                        export_motors_data[i] = instrument[i]['data'][:]
+                    except:
+                        pass
+                else:
+                    export_counters_data[i] = instrument[i][i][:]
+
+        return export_motors_data, export_counters_data
+
     def modification_date(self, filename):
         t = os.path.getmtime(filename)
         mt = str(datetime.datetime.fromtimestamp(t))[:-7]
         return mt
-
-    def table_menu(self):
-        self.table_menu = QMenu(self.tableWidget)
-        # Close the file
-        open_action = self.table_menu.addAction('Open File')
-        open_action.triggered.connect(self.check_selected_checkboxes)
-        # Open the file
-        close_action = self.table_menu.addAction('Close File')
-        close_action.triggered.connect(self.uncheck_selected_checkboxes)        
-        # Highlight a table row        
-        highlight_action = self.table_menu.addAction('Highlight')
-        highlight_action.triggered.connect(self.highlight_table)
-
-        self.table_menu.exec_(QtGui.QCursor.pos())
 
     def highlight_table(self, items=None):
         rm_signal = False
@@ -211,6 +252,30 @@ class MyDisplay(Display):
                 self.table_checkboxes[file].setStyleSheet("background-color : rgb(0,125,0);")
         if rm_signal:
             self.clear_table_files()
+
+    def export_2_csv(self):
+
+        items = self.tableWidget.selectedItems()
+        slice_ = self.tableWidget.columnCount() - 1
+        items = items[::slice_]
+        for item in items:
+            len_data = []
+            frame = {}
+            file_path = self.path + '/' + item.text()
+            motor_data, counter_data = self.get_hdf5_data_2_export(file_path)
+            csv_file_name = item.text().split(".hdf")[0] + ".csv"
+            csv_full_path = self.path + '/' +csv_file_name
+            columns = list(motor_data.keys()) + list(counter_data.keys())
+            for k in list(motor_data.values()):
+                len_data.append(len(k))
+            for z in list(counter_data.values()):
+                len_data.append(len(z))
+            len_data = np.array(len_data)
+            for i in list(motor_data.keys()):
+                frame[i] = motor_data[i][:len_data.min()]
+            for j in list(counter_data.keys()):
+                frame[j] = counter_data[j][:len_data.min()]
+            pd.DataFrame(frame).to_csv(csv_full_path, mode='w', header=True)
 
     def table_files(self):
         row = 0

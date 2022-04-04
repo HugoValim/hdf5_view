@@ -52,6 +52,6 @@ class Derivative(PlotAction):
 
             else:
                 if 'Derivative' in legend:
-                    self.plot.removeCurve(legend + ' Y')
+                    self.plot.removeCurve(legend)
 
         self.plot.resetZoom()

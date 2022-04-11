@@ -78,6 +78,8 @@ class MyDisplay(Display):
         self.store_current_motors= []
         self.store_current_monitors = []
         self.store_highlighted = []
+        self.standard_motor = None
+        self.standard_counter = None
         self.files = self.macros['FILES']
         head, tail = os.path.split(self.files[0])
         self.path = head
@@ -192,6 +194,12 @@ class MyDisplay(Display):
                             pass
                     else:
                         self.counters_data[i + '__data__' + tail] = instrument[i][i][:]
+                try:
+                    self.standard_motor = instrument.attrs["main_motor"]
+                    self.standard_counter = instrument.attrs["main_counter"]
+                except:
+                    self.standard_motor = None
+                    self.standard_counter = None
 
 
     def get_hdf5_data_2_export(self, file):
@@ -391,10 +399,10 @@ class MyDisplay(Display):
         header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
 
     def counter_checkboxes(self):
-        """Create counter checkboxes in ther tab interface"""
+        """Create counter checkboxes in the tab interface"""
         self.dict_counters = {}
         row = 0
-        for i in self.simplified_counter_data:
+        for i in sorted(self.simplified_counter_data):
             self.dict_counters[i] = QtWidgets.QCheckBox(parent=self.tableWidget_plot)
             self.dict_counters[i].clicked.connect(self.set_plot)
             self.tableWidget_plot.setCellWidget(row, 1, self.dict_counters[i])
@@ -402,10 +410,10 @@ class MyDisplay(Display):
             row += 1
 
     def motor_checkboxes(self):
-        """Create motor checkboxes in ther tab interface"""
+        """Create motor checkboxes in the tab interface"""
         self.dict_motors = {}
         row = 0
-        for i in self.simplified_motor_data:
+        for i in sorted(self.simplified_motor_data):
             self.dict_motors[i] = QtWidgets.QCheckBox(parent=self.tableWidget_plot)
             self.dict_motors[i].clicked.connect(self.uncheck_other_motors)
             self.tableWidget_plot.setCellWidget(row, 0, self.dict_motors[i])
@@ -413,10 +421,10 @@ class MyDisplay(Display):
             row += 1
         
     def monitor_checkboxes(self):
-        """Create counter checkboxes in ther tab interface"""
+        """Create counter checkboxes in the tab interface"""
         self.dict_monitors = {}
         row = 0
-        for i in self.simplified_counter_data:
+        for i in sorted(self.simplified_counter_data):
             self.dict_monitors[i] = QtWidgets.QCheckBox(parent=self.tableWidget_plot)
             self.dict_monitors[i].clicked.connect(self.uncheck_other_monitors)
             self.tableWidget_plot.setCellWidget(row, 2, self.dict_monitors[i])
@@ -513,15 +521,23 @@ class MyDisplay(Display):
 
     def set_standard_plot(self,counters, motors, monitors):
         """
-        Defines the standard plot. If you don't have any previous
-        configuration, it takes the first counter and motor, otherwise
-        it will take the ones that are current selected from previous
-        files.
+        Defines the standard plot. If the plot doesn't have any previous 
+        configuration, it takes the motor and counter passed by the attrs in the instrument path.
+        If these attributes don't exist as well, it takes the first counter and motor, finally
+        it will take the ones that are current selected from previous files.
         """
+
         if not counters:
-            counters.append(list(self.dict_counters.keys())[0])
+            if self.standard_counter is not None:
+                counters.append(self.standard_counter)
+            else:
+                counters.append(list(self.dict_counters.keys())[0])
         if not motors:
-            motors.append(list(self.dict_motors.keys())[0])
+            if self.standard_motor is not None:
+                motors.append(self.standard_motor)
+            else:
+                motors.append(list(self.dict_motors.keys())[0])
+
         for counter in self.dict_counters.keys():
             if counter in counters:
                 self.dict_counters[counter].setChecked(True)

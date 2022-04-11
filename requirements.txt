@@ -1,6 +1,10 @@
+wheel
 pydm
 pyqt5
 silx
 numpy
 python-dateutil
 lmfit
+qdarkstyle
+pymca
+pandas

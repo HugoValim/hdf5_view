@@ -5,18 +5,27 @@ from os import listdir
 from os.path import isfile, join
 import time
 import datetime
+
 import numpy as np
+import fits
+import pandas as pd
+
 from pydm import Display
-from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt
+from PyQt5 import QtWidgets,QtGui
 from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem, QHeaderView, QWidget, QCheckBox, QHBoxLayout, QSplitter, QApplication
 import silx.io
 from silx.gui import qt
 from silx.gui.plot import LegendSelector
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, QCoreApplication, QTimer
 from PyQt5 import QtCore
-import fits
+from PyMca5.PyMcaGui.pymca.ScanWindow import ScanWindow
+from PyMca5.PyMcaGui.plotting.PlotWindow import PlotWindow
+from PyMca5.PyMcaGui.plotting.LegendSelector import LegendListView
+from PyQt5.QtWidgets import QMenu
+from silx.gui.plot import Plot1D
+
 import plot_actions
-import hashlib
 
 class MyDisplay(Display):
 
@@ -37,7 +46,7 @@ class MyDisplay(Display):
         """Loop to check if a curve is selected or not"""
         self.timer = QTimer()
         self.timer.timeout.connect(self.on_dir_change_update)
-        self.timer.start(5000) #trigger every 1 seconds.
+        self.timer.start(10000) #trigger every 10 seconds.
 
     def keyPressEvent(self, event):
         """Connect keys to methods"""
@@ -52,45 +61,65 @@ class MyDisplay(Display):
                 self.app.main_window.showFullScreen()
 
     def on_dir_change_update(self):
-        # current_files = [f for f in listdir(self.path) if isfile(join(self.path, f))]
-        # current_files = [i for i in current_files if i.endswith('.hdf5')]
-        # difference = []
-        # for i in self.dir_files:
-        #     if i not in current_files:
-        #         difference.append(i)
-        # for i in current_files:
-        #     if i not in self.dir_files:
-        #         difference.append(i)
-        # print(difference)
-        # if difference:
-        #     print('here')
-        #     self.clear_table_files()
+        scroll_pos = self.tableWidget.verticalScrollBar().value()
         self.clear_table_files()
+        self.tableWidget.verticalScrollBar().setValue(scroll_pos)
 
     def initializa_setup(self):
-        """Initialize all setup variables"""
-        self.plot = self.ui.plotwindow
+        """Initialize all setup variables and methods"""
+        self.plot = ScanWindow(backend='silx')
+        self.verticalLayout.addWidget(self.plot)
         self.plot.setMinimumHeight(300)
-        self.plot.setMinimumWidth(400)
+        self.plot.setMinimumWidth(600)
         self.curve_now = None
         self.checked_now = None
         self.monitor_checked_now = None
         self.store_current_counters = []
         self.store_current_motors= []
         self.store_current_monitors = []
+        self.store_highlighted = []
         self.files = self.macros['FILES']
         head, tail = os.path.split(self.files[0])
         self.path = head
-        self.__legend_widget()
+        self.__plot_tools()
         self.table_files()
         self.table_stats_layout()
         self.new_buttons()
         self.build_splitable_layout()
         self.build_plot()
+        self.connections()
 
-      
+    def table_menu(self):
+        """
+        Build the menu that is shown when a right cick is done in the
+        table widget containing the files
+
+        """
+        self.table_menu = QMenu(self.tableWidget)
+        # Close the file
+        open_action = self.table_menu.addAction('Open File')
+        open_action.triggered.connect(self.check_selected_checkboxes)
+        # Open the file
+        close_action = self.table_menu.addAction('Close File')
+        close_action.triggered.connect(self.uncheck_selected_checkboxes)        
+        # Highlight a table row        
+        highlight_action = self.table_menu.addAction('Highlight')
+        highlight_action.triggered.connect(self.highlight_table)
+        # Export hdf content to csv
+        highlight_action = self.table_menu.addAction('Export as csv')
+        highlight_action.triggered.connect(self.export_2_csv)
+
+        self.table_menu.exec_(QtGui.QCursor.pos())
+
+    def connections(self):
+        """Do the connections"""
+        self.plot.sigPlotSignal.connect(self.plot_signal_handler)
+        # self.plot.sigActiveCurveChanged.connect(self.update_stat)
+        self.tableWidget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tableWidget.customContextMenuRequested[QtCore.QPoint].connect(self.table_menu)
 
     def build_splitable_layout(self):
+        """Build split bars"""
         splitter_frames = QSplitter(QtCore.Qt.Horizontal)
         splitter_frames.addWidget(self.frame_left)
         splitter_frames.addWidget(self.frame_right)
@@ -98,22 +127,21 @@ class MyDisplay(Display):
         splitter_frames.setCollapsible(1,False)
         splitter_frames.setStretchFactor(0, 1)
         splitter_frames.setStretchFactor(1, 1)
-        splitter_frames.setSizes([450, 200])
+        splitter_frames.setSizes([250, 400])
         self.horizontalLayout.addWidget(splitter_frames)
 
         splitter_tables = QSplitter(QtCore.Qt.Vertical)
         splitter_tables.addWidget(self.tableWidget)
         splitter_tables.addWidget(self.tableWidget_plot)
-        splitter_tables.addWidget(self.legend_widget)
+        # splitter_tables.addWidget(self.legend_widget)
         splitter_tables.setCollapsible(0,False)
         splitter_tables.setCollapsible(1,False)
-        splitter_tables.setCollapsible(2,False)
+        # splitter_tables.setCollapsible(2,False)
         splitter_tables.setStretchFactor(0, 1)
         splitter_tables.setStretchFactor(1, 1)
-        splitter_tables.setStretchFactor(2, 1)
+        # splitter_tables.setStretchFactor(2, 1)
         # splitter_frames.setSizes([450, 200])
         self.verticalLayout_left.addWidget(splitter_tables)
-
 
         splitter_plot_stat = QSplitter(QtCore.Qt.Vertical)
         splitter_plot_stat.addWidget(self.plot)
@@ -125,7 +153,6 @@ class MyDisplay(Display):
         splitter_plot_stat.setSizes([900, 100])
         self.verticalLayout.addWidget(splitter_plot_stat)
 
-
     def build_plot(self):
         self.get_hdf5_data()
         self.assert_data()
@@ -133,14 +160,12 @@ class MyDisplay(Display):
         self.set_standard_plot(self.store_current_counters, self.store_current_motors, self.store_current_monitors)
         self.uncheck_other_motors()
         self.uncheck_other_monitors()
-        self.connections()
         self.loop()
 
-    def __legend_widget(self):
-        self.legend_widget = LegendSelector.LegendsDockWidget(parent=self, plot = self.plot)
-        self.verticalLayout_left.addWidget(self.legend_widget)
-        # self.legend_widget.setMaximumWidth(500)
-        self.legend_widget.setMinimumHeight(100)
+    def __plot_tools(self):
+        # self.plot._buildLegendWidget() #Fix me im collapsed
+        self.plot.toggleCrosshairCursor()
+        # self.plot.legendWidget.setStyleSheet("color: rgb(0, 0, 0);")
 
     def get_hdf5_data(self):
         """Read Scan data and store into dicts, also creates a dict with simplified data names"""
@@ -168,10 +193,89 @@ class MyDisplay(Display):
                     else:
                         self.counters_data[i + '__data__' + tail] = instrument[i][i][:]
 
+
+    def get_hdf5_data_2_export(self, file):
+        """Read Scan data and store into dicts, also creates a dict with simplified data names"""
+        export_counters_data = {}
+        export_motors_data = {}
+
+        fo = open(file)
+        fo.close()
+        with silx.io.open(file) as sf:
+            data = sf
+            head, tail = os.path.split(file)
+            instrument = sf['Scan/scan_000/instrument']
+            for i in instrument:
+                # If the data is called 'data' them its a motor, otherwise its a counter
+                if 'data' in instrument[i]:
+                    if 'data' in instrument[i]:
+                        attrs = [j for j in instrument[i].attrs]
+                        if 'shape' in attrs:
+                            if len(instrument[i].attrs['shape'].split(',')) >= 2:
+                                continue
+                    try:
+                        export_motors_data[i] = instrument[i]['data'][:]
+                    except:
+                        pass
+                else:
+                    export_counters_data[i] = instrument[i][i][:]
+
+        return export_motors_data, export_counters_data
+
     def modification_date(self, filename):
         t = os.path.getmtime(filename)
         mt = str(datetime.datetime.fromtimestamp(t))[:-7]
         return mt
+
+    def highlight_table(self, items=None):
+        rm_signal = False
+        flag_signal = False
+        if not items:
+            items = self.tableWidget.selectedItems()
+            slice_ = self.tableWidget.columnCount() - 1
+            items = items[::slice_]
+            flag_signal = True
+        for item in items:
+            for j in range(self.tableWidget.columnCount() - 1):
+                if j == 0:
+                    file = self.tableWidget.item(item.row(), j).text()
+                    if flag_signal:
+                        if file in self.store_highlighted:
+                            self.store_highlighted.remove(file)
+                            rm_signal = True
+                            break
+                        else:
+                            self.store_highlighted.append(file)
+                if file in self.store_highlighted:                            
+                    self.tableWidget.item(item.row(), j).setBackground(QtGui.QColor(0,125,0))
+            if file in self.store_highlighted:
+                self.table_checkboxes[file].setStyleSheet("background-color : rgb(0,125,0);")
+        if rm_signal:
+            self.clear_table_files()
+
+    def export_2_csv(self):
+
+        items = self.tableWidget.selectedItems()
+        slice_ = self.tableWidget.columnCount() - 1
+        items = items[::slice_]
+        for item in items:
+            len_data = []
+            frame = {}
+            file_path = self.path + '/' + item.text()
+            motor_data, counter_data = self.get_hdf5_data_2_export(file_path)
+            csv_file_name = item.text().split(".hdf")[0] + ".csv"
+            csv_full_path = self.path + '/' +csv_file_name
+            columns = list(motor_data.keys()) + list(counter_data.keys())
+            for k in list(motor_data.values()):
+                len_data.append(len(k))
+            for z in list(counter_data.values()):
+                len_data.append(len(z))
+            len_data = np.array(len_data)
+            for i in list(motor_data.keys()):
+                frame[i] = motor_data[i][:len_data.min()]
+            for j in list(counter_data.keys()):
+                frame[j] = counter_data[j][:len_data.min()]
+            pd.DataFrame(frame).to_csv(csv_full_path, mode='w', header=True)
 
     def table_files(self):
         row = 0
@@ -204,12 +308,15 @@ class MyDisplay(Display):
             self.tableWidget.setItem(row, 2, QTableWidgetItem(len_points))
             self.tableWidget.setItem(row, 3, QTableWidgetItem(date))
             self.table_checkboxes[file] = QCheckBox()
-            self.table_checkboxes[file].setCheckState(QtCore.Qt.Unchecked)       
+            self.table_checkboxes[file].setCheckState(QtCore.Qt.Unchecked) 
+            self.tableWidget.setCellWidget(row, 4, self.table_checkboxes[file])
             full_file_path = self.path + '/' + file
             if full_file_path in self.files: 
                 self.table_checkboxes[file].setChecked(True)
             self.table_checkboxes[file].stateChanged.connect(self.on_state_changed)
-            self.tableWidget.setCellWidget(row, 4, self.table_checkboxes[file])
+            #Keep the hightlighted ones
+            if file in self.store_highlighted:
+                self.highlight_table(items = [self.tableWidget.item(row, 0)])
             row += 1
 
         header = self.tableWidget.horizontalHeader()
@@ -260,34 +367,18 @@ class MyDisplay(Display):
         for key in motor_count.keys():
             if motor_count[key] != len(self.files):
                 flag_diff = True
-        # for key in counters_count.keys():
-        #     if counters_count[key] != len(self.files):
-        #         flag_diff = True
-        # if flag_diff:
-        #        msg = QMessageBox()
-        #        msg.setIcon(QMessageBox.Information)
-        #        msg.setText("There is a difference between counters/motors in the selected files")
-        #        msg.setInformativeText("Some counters and/or motors are not present in all the files")
-        #        msg.setWindowTitle("Warning")
-        #        # msg.setDetailedText("The details are as follows:")
-        #        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-        #        # msg.buttonClicked.connect(msgbtn)
-        #        retval = msg.exec_()
-
-    def connections(self):
-        """Do the connections"""
-        self.plot.sigPlotSignal.connect(self.plot_signal_handler)
-        self.plot.sigActiveCurveChanged.connect(self.update_stat)
 
     def plot_signal_handler(self, dict_):
-        # if dict_['event'] == 'curveClicked':
-        #     print(dict_['label'])
-        #     print(self.plot.getActiveCurve())
-        #     if self.plot.getActiveCurve() is not None:
-        #         self.update_stat()
-        # print(dict_)
-        pass
-
+        if dict_['event'] == 'curveClicked':
+            if self.plot.getActiveCurve() is not None:
+                self.update_stat()
+        if str(self.app.style().metaObject().className()) == 'QFusionStyle':
+            self.plot._xPos.setStyleSheet("color: rgb(0, 0, 0);")
+            self.plot._yPos.setStyleSheet("color: rgb(0, 0, 0);")
+        elif str(self.app.style().metaObject().className()) == 'QStyleSheetStyle':
+            self.plot._xPos.setStyleSheet("color: rgb(255, 255, 255);")
+            self.plot._yPos.setStyleSheet("color: rgb(255, 255, 255);")
+        
     def build_plot_table(self):
         row_size = max([len(self.simplified_counter_data), len(self.simplified_motor_data)])
         self.tableWidget_plot.setRowCount(row_size)
@@ -309,6 +400,7 @@ class MyDisplay(Display):
             self.tableWidget_plot.setCellWidget(row, 1, self.dict_counters[i])
             self.dict_counters[i].setText(i)
             row += 1
+
     def motor_checkboxes(self):
         """Create motor checkboxes in ther tab interface"""
         self.dict_motors = {}
@@ -389,19 +481,25 @@ class MyDisplay(Display):
                     else:
                         data = self.counters_data[i + '__data__' + tail]
                     if self.checked_now:
-                        self.plot.getXAxis().setLabel(self.checked_now)
-                        self.plot.addCurve(self.motors_data[self.checked_now + '__data__' + tail], data, legend = i + '__data__' + tail)
+                        # self.plot.getXAxis().setLabel(self.checked_now)
+                        if self.dict_counters[i].isChecked():
+                            self.plot.addCurve(self.motors_data[self.checked_now + '__data__' + tail][:len(data)], data, legend = i + '__data__' + tail)
                     else:
-                        self.plot.getXAxis().setLabel("Points")
+                        # self.plot.getXAxis().setLabel("Points")
                         points = [i for i in range(len(data))]
-                        self.plot.addCurve(points, data, legend = i + '__data__' + tail)
+                        if self.dict_counters[i].isChecked():
+                            self.plot.addCurve(points, data, legend = i + '__data__' + tail)
                 
                     if self.dict_counters[i].isChecked():
                         self.plot.getCurve(i + '__data__' + tail)
                     else:
-                        self.plot.remove(i + '__data__' + tail)
+                        self.plot.removeCurve(i + '__data__' + tail + ' Y')
+                        if i + '__data__' + tail in self.plot.dataObjectsDict:
+                            del self.plot.dataObjectsDict[i + '__data__' + tail]
+                        # print(self.plot._curveList)
 
         self.plot.resetZoom()
+        self.plot.updateLegends()
 
     def new_buttons(self):
         """Method to add new buttons with new funcionalities to the plot"""
@@ -414,6 +512,16 @@ class MyDisplay(Display):
         toolbar.addAction(action)
 
     def set_standard_plot(self,counters, motors, monitors):
+        """
+        Defines the standard plot. If you don't have any previous
+        configuration, it takes the first counter and motor, otherwise
+        it will take the ones that are current selected from previous
+        files.
+        """
+        if not counters:
+            counters.append(list(self.dict_counters.keys())[0])
+        if not motors:
+            motors.append(list(self.dict_motors.keys())[0])
         for counter in self.dict_counters.keys():
             if counter in counters:
                 self.dict_counters[counter].setChecked(True)
@@ -438,8 +546,7 @@ class MyDisplay(Display):
 
         if self.plot.getActiveCurve() is not None:
             activeCurve = self.plot.getActiveCurve()
-            x0 = activeCurve.getXData()
-            y0 = activeCurve.getYData()
+            x0, y0, legend, info = activeCurve[0:4]
             self.stats = fits.fitGauss(x0,y0)
             self.peak = self.stats[0]
             self.peak_pos = self.stats[1]

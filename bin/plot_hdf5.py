@@ -531,12 +531,12 @@ class MyDisplay(Display):
             if self.standard_counter is not None:
                 counters.append(self.standard_counter)
             else:
-                counters.append(next(iter(self.simplified_counter_data)))
+                counters.append(list(self.dict_counters.keys())[0])
         if not motors:
             if self.standard_motor is not None:
                 motors.append(self.standard_motor)
             else:
-                motors.append(next(iter(self.simplified_motor_data)))
+                motors.append(list(self.dict_motors.keys())[0])
 
         for counter in self.dict_counters.keys():
             if counter in counters:

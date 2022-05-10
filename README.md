@@ -11,13 +11,13 @@ sudo apt-get install python3-dev
 Then, install all dependencies:
 
 ```
-pip install -r requirements.txt
+pip install sol-view
 ```
 
-To launch the GUI, just run sol_view.py:
+To launch the GUI, just run:
 
 ```
-./sol_view.py
+sol_view.py
 ```
 
 ![sol-view main screen.](images/main_screen.png "sol-view main screen")

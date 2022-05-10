@@ -1,6 +1,7 @@
 import numpy
 from silx.gui.plot.actions import PlotAction
 
+
 class Derivative(PlotAction):
     """QAction performing a Fourier transform on all curves when checked,
     and reverse transform when unchecked.
@@ -8,16 +9,18 @@ class Derivative(PlotAction):
     :param plot: PlotWindow on which to operate
     :param parent: See documentation of :class:`QAction`
     """
+
     def __init__(self, plot, parent=None):
         PlotAction.__init__(
-                self,
-                plot,
-                icon='shape-circle',
-                text='Derivative',
-                tooltip='Perform derivative on all curves',
-                triggered=self.DerivativeAllCurves,
-                checkable=True,
-                parent=parent)
+            self,
+            plot,
+            icon="shape-circle",
+            text="Derivative",
+            tooltip="Perform derivative on all curves",
+            triggered=self.DerivativeAllCurves,
+            checkable=True,
+            parent=parent,
+        )
 
     def DerivativeAllCurves(self, checked=False):
         """Get all curves from our PlotWindow, compute the amplitude spectrum
@@ -43,15 +46,14 @@ class Derivative(PlotAction):
                 info = {}
 
             if checked:
-                dx = x[1]-x[0]
+                dx = x[1] - x[0]
                 dydx = numpy.gradient(y, dx)
-                
+
                 # plot the amplitude spectrum
-                self.plot.addCurve(x, dydx, legend="Derivative of " + legend,
-                                   info=info)
+                self.plot.addCurve(x, dydx, legend="Derivative of " + legend, info=info)
 
             else:
-                if 'Derivative' in legend:
+                if "Derivative" in legend:
                     self.plot.removeCurve(legend)
 
         self.plot.resetZoom()

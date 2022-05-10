@@ -8,3 +8,4 @@ lmfit
 qdarkstyle
 pymca
 pandas
+pre-commit

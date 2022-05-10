@@ -17,7 +17,7 @@ pip install sol-view
 To launch the GUI, just run:
 
 ```
-sol_view.py
+sol_view
 ```
 
 ![sol-view main screen.](images/main_screen.png "sol-view main screen")

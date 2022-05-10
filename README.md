@@ -8,7 +8,7 @@ sudo apt-get update
 sudo apt-get install python3-dev
 ```
 
-Then, install all dependencies:
+Use pip to install it:
 
 ```
 pip install sol-view
